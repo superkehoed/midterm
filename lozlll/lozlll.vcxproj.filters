@@ -24,7 +24,7 @@
     <ClCompile Include="shader.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="sprite_data.c">
+    <ClCompile Include="sprite.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -35,10 +35,10 @@
     <ClInclude Include="engine.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="sprite_data.h">
+    <ClInclude Include="defines.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="defines.h">
+    <ClInclude Include="sprite.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

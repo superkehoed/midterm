@@ -80,13 +80,13 @@
     <ClCompile Include="engine.c" />
     <ClCompile Include="main.c" />
     <ClCompile Include="shader.c" />
-    <ClCompile Include="sprite_data.c" />
+    <ClCompile Include="sprite.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="defines.h" />
     <ClInclude Include="engine.h" />
     <ClInclude Include="shader.h" />
-    <ClInclude Include="sprite_data.h" />
+    <ClInclude Include="sprite.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
