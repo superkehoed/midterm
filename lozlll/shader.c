@@ -5,7 +5,7 @@
 #include <GL/GLU.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "defines.h"
+#include "globals.h"
 #include "shader.h"
 /******************************************************************************/
 bool InitializeShader(Shader_T *s, const char *vsfile, const char *fsfile)
@@ -20,12 +20,12 @@ bool InitializeShader(Shader_T *s, const char *vsfile, const char *fsfile)
 	//Get vertex source
 	const GLchar* vertexShaderSource[] =
 	{
-		"#version 140\nin vec2 LVertexPos2D; void main() { gl_Position = vec4( LVertexPos2D.x, LVertexPos2D.y, 0, 1 ); }"
+		"#version 400\nin vec2 LVertexPos2D; void main() { gl_Position = vec4( LVertexPos2D.x, LVertexPos2D.y, 0, 1 ); }"
 	};
 	//Get fragment source
 	const GLchar* fragmentShaderSource[] =
 	{
-		"#version 140\nout vec4 LFragment; void main() { LFragment = vec4( 1.0, 1.0, 1.0, 1.0 ); }"
+		"#version 400\nout vec4 LFragment; void main() { LFragment = vec4( 1.0, 1.0, 1.0, 1.0 ); }"
 	};	
 	//Generate program
 	s->id = glCreateProgram();

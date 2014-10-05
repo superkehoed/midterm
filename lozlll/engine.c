@@ -1,59 +1,79 @@
 /******************************************************************************/
+/**
+ * @file engine.c
+ * @author Ulysee Thompson
+ */
+/******************************************************************************/
 #include <GL/glew.h>
 #include <SDL.h>
 #include <SDL_opengl.h>
+#include <SDL_image.h>
 #include <GL/GLU.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "defines.h"
+#include "globals.h"
 #include "sprite.h"
+#include "graphic.h"
+#include "entity.h"
 #include "shader.h"
 #include "engine.h"
 /******************************************************************************/
 //Globals
-/******************************************************************************/
-/** Global variable for tracking the current time as of the last engine update*/
-long gCurrentTime;
+/** Global pointer for tracking the current game engine */
+Engine_T *game;
 /******************************************************************************/
 /** Initializes the game engine and sets everything up for the game
  * @param e The engine to be started
  */
-bool Startup(Engine_T *e)
+bool Startup()
 {
 	bool success = true;
 	Sprite_T *s;
+	Entity_T *ent;
 	int i;
 	GLenum glewError;
-	//Basic refresh
-	gCurrentTime = SDL_GetTicks();
-	e->state = GAMESTATE_INTRO;
-	e->entityCount = 0;
-	e->spriteCount = 0;
-	e->lastUpdate = 0;
-	e->done = false;
-	//Reserve the memory necessary for entities and set up the unused sprites list
+	//Global initialization
+	gUnusedSpriteList = NULL;
+	gUnusedEntityList = NULL;
+	//Engine initialization
+	game->state = GAMESTATE_INTRO;
+	game->entityCount = 0;
+	game->spriteCount = 0;
+	game->lastUpdate = 0;
+	game->hero = NULL;
+	game->foreGraphicsHead = NULL;
+	game->foreGraphicsTail = NULL;
+	game->backGraphicsHead = NULL;
+	game->backGraphicsTail = NULL;
+	game->done = false;
+	//Reserve the memory necessary for entities and set up the unused entity list
+	ent = (Entity_T *)malloc(sizeof(Entity_T)*STARTING_NUM_ENTITIES);
+	for(i = 0;i < STARTING_NUM_ENTITIES;i++){
+		FreeEntity(ent);
+		ent++;
+	}
+	//Reserve the memory necessary for sprites and set up the unused sprites list
 	s = (Sprite_T *)malloc(sizeof(Sprite_T)*STARTING_NUM_SPRITES);
 	for(i = 0;i < STARTING_NUM_SPRITES;i++){
 		FreeSprite(s);
 		s++;
 	}
 	//Initialize SDL
-	if( SDL_Init( SDL_INIT_VIDEO ) < 0 )
+	if( SDL_Init( SDL_INIT_EVERYTHING ) < 0 )
 	{
 		printf( "SDL could not initialize! SDL Error: %s\n", SDL_GetError() );
 		success = false;
 	}
-	else
-	{
-		//Use OpenGL 3.1 core
-		SDL_GL_SetAttribute( SDL_GL_CONTEXT_MAJOR_VERSION, 3 );
-		SDL_GL_SetAttribute( SDL_GL_CONTEXT_MINOR_VERSION, 2 );
-		SDL_GL_SetAttribute( SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE );
+	else if(!IS_SET(IMG_Init(IMG_INIT_PNG), IMG_INIT_PNG)){
+		printf("ERROR - Startup(): Could not initialize SDL_image: %s\n", IMG_GetError());
+		success = false;
+	}else{
+		game->currentTime = SDL_GetTicks();
 
 		//Create window
-		e->window = SDL_CreateWindow( GAME_NAME, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 
+		game->window = SDL_CreateWindow( GAME_NAME, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 
 									SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN );
-		if( e->window == NULL )
+		if( game->window == NULL )
 		{
 			printf( "Window could not be created! SDL Error: %s\n", SDL_GetError() );
 			success = false;
@@ -61,8 +81,8 @@ bool Startup(Engine_T *e)
 		else
 		{
 			//Create context
-			e->context = SDL_GL_CreateContext( e->window );
-			if( e->context == NULL )
+			game->context = SDL_GL_CreateContext( game->window );
+			if( game->context == NULL )
 			{
 				printf( "OpenGL context could not be created! SDL Error: %s\n", SDL_GetError() );
 				success = false;
@@ -84,7 +104,7 @@ bool Startup(Engine_T *e)
 				}
 
 				//Initialize OpenGL
-				if( !InitializeGL(e) )
+				if( !InitializeGL() )
 				{
 					printf( "Unable to initialize OpenGL!\n" );
 					success = false;
@@ -92,16 +112,17 @@ bool Startup(Engine_T *e)
 			}
 		}
 	}
+	//TODO: Hide mouse
 	return success;
 }
 /******************************************************************************/
 /** The polling method for the engine
  * @param e The engine to receiving polling events
  */
-void Poll(Engine_T *e)
+void Poll()
 {
 	//Poll for any inputs by the player at this time
-	switch(e->state){
+	switch(game->state){
 	default: printf("Poll(): No state set!\n"); break;
 	}
 }
@@ -109,46 +130,57 @@ void Poll(Engine_T *e)
 /** The updating method for the engine
  * @param e The engine to run the update method
  */
-void Update(Engine_T *e)
+void Update()
 {
-	gCurrentTime = SDL_GetTicks();
-	switch(e->state){
+	Entity_T *e;
+	Sprite_T *s;
+	Rect r;
+	Animation_T a;
+	game->currentTime = SDL_GetTicks();
+	switch(game->state){
+	case GAMESTATE_INTRO:
+		if(game->foreGraphicsHead == NULL){
+			e = NewEntity();
+			s = NewSprite();
+			r.x = 0;
+			r.y = 0;
+			r.w = SCREEN_WIDTH;
+			r.h = SCREEN_HEIGHT;
+			memset(&a, 0, sizeof(a));
+			SetupSprite(s, "splash.png", &r, 1, &a, 1); 
+			SetupGraphic(e, s, GRAPHICTYPE_SPLASH, 300, GRAPHFLAG_FADE|GRAPHFLAG_FULLSCREEN);
+			AddSplashScreen(e);
+		}
+		break;
 	default: printf("Update(): No state set!\n"); break;
 	}
 	//Go through the current map and update all entities
-	e->lastUpdate = gCurrentTime;
+	game->lastUpdate = game->currentTime;
 }
 /******************************************************************************/
 /** The drawing method for the engine
  * @param e The engine to run the draw method
  */
-void Draw(Engine_T *e)
+void Draw()
 {
-	if(e->shader == NULL){
+	Entity_T *e;
+	if(game->shader == NULL){
 		printf("Draw(): No shader has been assigned to the game engine!");
 		return;
 	}
 
-	switch(e->state){
+	switch(game->state){
 	case GAMESTATE_INTRO:
 		//Draw the current splash screen
 		//Clear color buffer
 		glClear( GL_COLOR_BUFFER_BIT );
 		//Bind program
-		glUseProgram( e->shader->id );
-		//Enable vertex position
-		glEnableVertexAttribArray( e->shader->vertex_attrib );
-		//Set vertex data
-		glBindBuffer( GL_ARRAY_BUFFER, e->shader->VBO );
-		glVertexAttribPointer( e->shader->vertex_attrib, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), NULL );
-		//Set index data and render
-		glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, e->shader->IBO );
-		glDrawElements( GL_TRIANGLE_FAN, 4, GL_UNSIGNED_INT, NULL );
-		//Disable vertex position
-		glDisableVertexAttribArray( e->shader->vertex_attrib );
+		glUseProgram( game->shader->id );
+		for(e = game->foreGraphicsHead;e != NULL;e = e->next)
+			DrawGraphic(e);
 		//Unbind program
 		glUseProgram( (GLuint)NULL );
-		SDL_GL_SwapWindow( e->window );
+		SDL_GL_SwapWindow( game->window );
 		break;
 	case GAMESTATE_MAIN_MENU:
 		//Draw the background
@@ -180,7 +212,7 @@ void Draw(Engine_T *e)
 /**Initializes GL and sets up a shader for the engine
  * @param e The engine which will have its shader set up
  */
-bool InitializeGL(Engine_T *e)
+bool InitializeGL()
 {
 	//Success flag
 	bool success = true;
@@ -198,7 +230,7 @@ bool InitializeGL(Engine_T *e)
 	//IBO data
 	GLuint indexData[] = { 0, 1, 2, 3 };
 	shader = NewShader();
-	e->shader = shader;
+	game->shader = shader;
 	//Initialize the Shader
 	InitializeShader(shader, "shader.vs", "shader.fs");
 	//Initialize clear color
@@ -215,38 +247,147 @@ bool InitializeGL(Engine_T *e)
 	glBufferData( GL_ELEMENT_ARRAY_BUFFER, 4 * sizeof(GLuint), indexData, GL_STATIC_DRAW );
 
 	
+	glGenBuffers(1, &game->foreGraphicsVBO);
+	glGenBuffers(1, &game->backGraphicsVBO);	
 	return success;
 }
 /******************************************************************************/
 /**The main loop for the engine
  * @param e The engine which will run the main loop
  */
-void MainLoop(Engine_T *e)
+void MainLoop()
 {
 	Uint32 ticks;
-	Poll(e);
-	Update(e);
-	Draw(e);
+	Poll();
+	Update();
+	Draw();
 	//Delay for at least one full frame-length if it wasn't already
-	if((ticks = gCurrentTime - e->lastUpdate) < MILLISECONDS_PER_FRAME)
+	if((ticks = game->currentTime - game->lastUpdate) < MILLISECONDS_PER_FRAME){
+		printf("Cycle Timer: %d\n", ticks);
 		SDL_Delay(URANGE(1, MILLISECONDS_PER_FRAME -ticks, MILLISECONDS_PER_FRAME));
+	}else
+		printf("Cycle Timer: %d\n", game->currentTime - game->lastUpdate);
 	return;
 }
 /******************************************************************************/
 /**Shuts down and cleans up the engine and SDL/OpenGL code
  * @param e The engine which needs to be shut down
  */
-void Shutdown(Engine_T *e)
+void Shutdown()
 {
 	//TODO: Add a check to make sure startup has been run on the game engine
 	//Deallocate program
-	DestroyShader(e->shader);
+	DestroyShader(game->shader);
 	//Destroy window	
-	SDL_DestroyWindow( e->window );
-	e->window = NULL;
+	SDL_DestroyWindow( game->window );
+	game->window = NULL;
 	//Quit SDL subsystems
 	SDL_Quit();
 }
 /******************************************************************************/
+/**
+ * Borrowed graciously from the Game Programming Wiki and improvised.
+ * Loads a png file by name as an SDL surface, converts it to an OpenGL
+ * Texture and then returns the texture ID.
+ */
+GLuint LoadTex(const char *name)
+{
+	GLuint texture;			// This is a handle to our texture object
+	SDL_Surface *surface;	// This surface will tell us the details of the image
+	GLenum texture_format;
+	GLint  nOfColors;
+ 
+	if ( (surface = IMG_Load(name)) ) { 
+ 
+		// Check that the image's width is a power of 2
+		if ( (surface->w & (surface->w - 1)) != 0 ) {
+			printf("warning: %s has a width that is not a power of 2\n", name);
+		}
+ 
+		// Also check if the height is a power of 2
+		if ( (surface->h & (surface->h - 1)) != 0 ) {
+			printf("warning: %s has a height that is not a power of 2\n", name);
+		}
+ 
+			// get the number of channels in the SDL surface
+			nOfColors = surface->format->BytesPerPixel;
+			if (nOfColors == 4)     // contains an alpha channel
+			{
+					if (surface->format->Rmask == 0x000000ff)
+							texture_format = GL_RGBA;
+					else
+							texture_format = GL_BGRA;
+			} else if (nOfColors == 3)     // no alpha channel
+			{
+					if (surface->format->Rmask == 0x000000ff)
+							texture_format = GL_RGB;
+					else
+							texture_format = GL_BGR;
+			} else {
+					printf("warning: the image is not truecolor..  this will probably break\n");
+					// this error should not go unhandled
+			}
+ 
+		// Have OpenGL generate a texture object handle for us
+		glGenTextures( 1, &texture );
+ 
+		// Bind the texture object
+		glBindTexture( GL_TEXTURE_2D, texture );
+ 
+		// Set the texture's stretching properties
+			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+ 
+		// Edit the texture object's image data using the information SDL_Surface gives us
+		glTexImage2D( GL_TEXTURE_2D, 0, nOfColors, surface->w, surface->h, 0,
+						  texture_format, GL_UNSIGNED_BYTE, surface->pixels );
+	} 
+	else {
+		printf("LoadTex(): SDL could not load %s: %s\n", name, SDL_GetError());
+		return -1;
+	}    
+ 
+	// Free the SDL_Surface only if it was successfully created
+	if ( surface ) { 
+		SDL_FreeSurface( surface );
+	}
+	return texture;
+}
+/******************************************************************************/
+void AddSplashScreen(Entity_T *e)
+{
+	//Add to the back of the linked list
+	if(game->foreGraphicsHead == NULL){
+		game->foreGraphicsHead = e;
+		game->foreGraphicsTail = e;
+	}else{
+		if(game->foreGraphicsTail == NULL){
+			//Generate an error, tail is missing
+		}else{
+			game->foreGraphicsTail = e;
+		}
+	}
+}
+/******************************************************************************/
+void RemoveSplashScreen(Entity_T *e)
+{
+	bool success = false;
+	//Remove from the linked list
+	Entity_T *ent;
+	if(game->foreGraphicsHead == e){
+		if(game->foreGraphicsTail == e)
+			game->foreGraphicsTail = NULL;
+		FreeEntity(game->foreGraphicsHead);
+		game->foreGraphicsHead = 0;
+	}else{
+		for(ent = game->foreGraphicsHead;ent != NULL;ent = ent->next)
+			if(ent->next == e)
+				break;
+		if(ent != NULL){
+			ent->next = e->next;
+			FreeEntity(e);
+		}
+	}
+}
 /******************************************************************************/
 /******************************************************************************/

@@ -18,19 +18,31 @@ typedef struct Engine_T{
 	SDL_Window* window; /**< The window the game renders to */
 	SDL_GLContext context; /**< The OpenGL context of the window */
 	Shader_T *shader; /**< The shader being used by the engine */
+	Entity_T *hero; /**< The entity the player is currently controlling */
+	Entity_T *foreGraphicsHead; /** The foreground graphics for the game */
+	Entity_T *foreGraphicsTail; /** The foreground graphics for the game */
+	Entity_T *backGraphicsHead; /** The background graphics for the game */
+	Entity_T *backGraphicsTail; /** The background graphics for the game */
+	Entity_T *splashScreensHead; /** The splash screens for the game */
+	GLuint	foreGraphicsVBO; /**< The vertex buffer object used for the current splash screen*/
+	GLuint	backGraphicsVBO; /**< The vertex buffer object used for the current splash screen*/
+
 	int state; /**< The current gamestate */
 	int entityCount; /**< The current global count for entities */
 	int spriteCount; /**< The current global count for sprites */
 	int fontCount; /**< The current global count for sprites */
-	int lastUpdate; /**< The last time an update occurred */
+	GLuint lastUpdate; /**< The last time an update occurred */
+	GLuint currentTime;	/**< The current time for the game */
 	//SpriteData *mSpriteList; /**< Linked list for tracking sprite
 }Engine_T;
 /******************************************************************************/
-void EndGame(Engine_T *e);
-bool Startup(Engine_T *e);
-bool InitializeGL(Engine_T *e);
-void Shutdown(Engine_T *e);
-void MainLoop(Engine_T *e);
+void EndGame();
+bool Startup();
+bool InitializeGL();
+void Shutdown();
+void MainLoop();
+void AddSplashScreen(Entity_T *e);
+GLuint LoadTex(const char *name);
 /******************************************************************************/
 //Externals
 extern Engine_T *game;

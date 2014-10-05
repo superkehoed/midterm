@@ -7,18 +7,16 @@ and may not be redistributed without written permission.*/
 #include <SDL_opengl.h>
 #include <gl\glu.h>
 #include <stdio.h>
-#include "defines.h"
-#include "sprite.h"
-#include "shader.h"
-#include "engine.h"
+#include "include.h"
 
 int main( int argc, char* args[] )
 {
-	Engine_T game;
-	if(!Startup(&game))
+	Engine_T engine;
+	game = &engine;
+	if(!Startup())
 		printf("Failed to initialize!\n");
-	while(!game.done)
-		MainLoop(&game);
-	Shutdown(&game);
+	while(!game->done)
+		MainLoop();
+	Shutdown();
 	return 0;
 }

@@ -10,8 +10,7 @@
 #include <SDL.h>
 #include <SDL_opengl.h>
 #include <GL/GLU.h>
-#include "defines.h"
-#include "sprite.h"
+#include "include.h"
 /******************************************************************************/
 /** Linked list storing any unused Sprite_T objects */
 Sprite_T *gUnusedSpriteList;
@@ -30,7 +29,7 @@ Sprite_T *NewSprite()
 		s->next = NULL;
 		//Set the sprite's validation time to allow the system to know if a
 		//sprite association is now invalid.
-		s->validation = gCurrentTime;
+		s->validation = game->currentTime;
 		return s;
 	}
 }
@@ -45,6 +44,19 @@ void FreeSprite(Sprite_T *s)
 	//Clear the sprite's validation to an impossible time to make it invalid
 	//For any entities that may still have pointers to it.
 	s->validation = -1;
+}
+/******************************************************************************/
+void SetupSprite(Sprite_T *s, const char *file, 
+				Rect *frames, short frame_num,
+				Animation_T *animations, short anim_num)
+{
+	int i;
+	s->texId = LoadTex(file);
+	for(i = 0;i < frame_num;i++)
+		s->frames[i] = frames[i];
+	for(i = 0;i < frame_num;i++)
+		s->animations[i] = animations[i];
+	return;
 }
 /******************************************************************************/
 /******************************************************************************/

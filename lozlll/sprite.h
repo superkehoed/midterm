@@ -16,8 +16,8 @@ typedef struct Sprite_T{
 	struct Sprite_T *next; /**< Used for the unused sprite list */
 	long validation; /**< Validation time of the sprite */
 	GLuint texId; /**< The id of the texture this sprite uses */
-	SDL_Rect frames[MAX_FRAMES]; /**< The list of frames for this sprite */
-	Animation_T Animations[MAX_ANIMATIONS]; /**< The list of animations for this sprite */
+	Rect frames[MAX_FRAMES]; /**< The list of frames for this sprite */
+	Animation_T animations[MAX_ANIMATIONS]; /**< The list of animations for this sprite */
 }Sprite_T;
 //Externals
 extern Sprite_T *gUnusedSpriteList;
@@ -28,3 +28,6 @@ void DrawSprite(Sprite_T *sprite, GLuint x, GLuint y);
 Sprite_T  *NewSprite();
 void FreeSprite(Sprite_T *sprite);
 extern Sprite_T *UnusedSpriteList;
+void SetupSprite(Sprite_T *s, const char *file, 
+				Rect *frames, short frame_num,
+				Animation_T *animations, short anim_num);

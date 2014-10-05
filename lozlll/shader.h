@@ -2,7 +2,7 @@
 #ifndef __SHADER_H
 #define __SHADER_H
 /******************************************************************************/
-typedef struct ShaderData{
+typedef struct Shader_T{
 	GLuint id; /**< ProgramID for the shader */
 	GLuint VBO; /**< Vertex Buffer Object id */
 	GLuint IBO; /**< Index Buffer Object id */
