@@ -24,8 +24,8 @@ typedef struct Engine_T{
 	Entity_T *backGraphicsHead; /** The background graphics for the game */
 	Entity_T *backGraphicsTail; /** The background graphics for the game */
 	Entity_T *splashScreensHead; /** The splash screens for the game */
-	GLuint	foreGraphicsVBO; /**< The vertex buffer object used for the current splash screen*/
-	GLuint	backGraphicsVBO; /**< The vertex buffer object used for the current splash screen*/
+	GLuint	vertexBuffer; /**< The vertex buffer object*/
+	GLuint	textureBuffer; /**< The UV buffer object*/
 
 	int state; /**< The current gamestate */
 	int entityCount; /**< The current global count for entities */

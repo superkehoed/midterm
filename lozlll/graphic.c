@@ -6,22 +6,32 @@
 
 void DrawGraphic(Entity_T *graphic)
 {
-	Rect r;
 	GLfloat verts[8];
+	GLfloat UVs[8];
+	GLuint texloc;
 	if(graphic->type != ENTYPE_GRAPHIC){
 		//Generate an error
 		return;
 	}
 	
 	if(IS_SET(graphic->display.flags, GRAPHFLAG_FULLSCREEN)){
-		verts[0] = 0;
-		verts[1] = 0;
-		verts[2] = SCREEN_WIDTH;
-		verts[3] = 0;
-		verts[4] = SCREEN_WIDTH;
-		verts[5] = SCREEN_HEIGHT;
-		verts[6] = 0;
-		verts[7] = SCREEN_HEIGHT;
+		verts[0] = -1.0f;
+		verts[1] = -1.0f;
+		verts[2] = -1.0f;
+		verts[3] = 1.0f;
+		verts[4] = 1.0f;
+		verts[5] = 1.0f;
+		verts[6] = 1.0f;
+		verts[7] = -1.0f;
+		//Now the texture coordinates
+		UVs[0] = 0.0f;
+		UVs[1] = 1.0f;
+		UVs[2] = 0.0f;
+		UVs[3] = 0.0f;
+		UVs[4] = 1.0f;
+		UVs[5] = 0.0f;
+		UVs[6] = 1.0f;
+		UVs[7] = 1.0f;
 	}else{
 		verts[0] = graphic->pos.x;
 		verts[1] = 0;
@@ -34,24 +44,33 @@ void DrawGraphic(Entity_T *graphic)
 	}
 
 	//Create VBO
-	glBindBuffer( GL_ARRAY_BUFFER, game->foreGraphicsVBO );
+	glBindBuffer( GL_ARRAY_BUFFER, game->vertexBuffer );
+	//Buffer the VBO with the new vertices
 	glBufferData( GL_ARRAY_BUFFER, 8 * sizeof(GLfloat), verts, GL_STATIC_DRAW );
-
+	//Set the uniform up for the texture
+	texloc = glGetUniformLocation(game->shader->id, "tex");
+	glProgramUniform1i(game->shader->id, texloc, 0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, graphic->sprite->texId);
 	//Enable vertex position
 	glEnableVertexAttribArray( game->shader->vertex_attrib );
 	//Set vertex data
-	glBindBuffer( GL_ARRAY_BUFFER, game->foreGraphicsVBO );
-	glVertexAttribPointer( game->shader->vertex_attrib, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), NULL );
-	//Set index data and render
-	glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, game->shader->IBO );
-	glDrawElements( GL_TRIANGLE_FAN, 4, GL_UNSIGNED_INT, NULL );
+	glVertexAttribPointer( game->shader->vertex_attrib, 2, GL_FLOAT, GL_FALSE, 0, NULL );
+	//Enable texture UVs
+	glEnableVertexAttribArray( game->shader->uv_attrib );
+	glBindBuffer( GL_ARRAY_BUFFER, game->textureBuffer );
+	glBufferData( GL_ARRAY_BUFFER, 8 * sizeof(GLfloat), UVs, GL_STATIC_DRAW );
+	glVertexAttribPointer( game->shader->uv_attrib, 2, GL_FLOAT, GL_FALSE, 0, NULL );
+	glDrawArrays( GL_TRIANGLE_FAN, 0, 4);
 	//Disable vertex position
 	glDisableVertexAttribArray( game->shader->vertex_attrib );
+	glDisableVertexAttribArray( game->shader->uv_attrib );
 }
 
 void SetupGraphic(Entity_T *ent, Sprite_T *sprite, short type, GLuint timer, long flags)
 {
 	ent->sprite = sprite;
+	ent->type = ENTYPE_GRAPHIC;
 	ent->nextFrame = -1;
 	ent->currentFrame = 0;
 	ent->display.startTime = game->currentTime;

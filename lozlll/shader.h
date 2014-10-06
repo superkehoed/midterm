@@ -7,6 +7,7 @@ typedef struct Shader_T{
 	GLuint VBO; /**< Vertex Buffer Object id */
 	GLuint IBO; /**< Index Buffer Object id */
 	GLuint vertex_attrib; /**< Id for the 2d vertex attribute */
+	GLuint uv_attrib; /**< Id for the 2d uv attribute */
 }Shader_T;
 /******************************************************************************/
 bool InitializeShader(Shader_T *s, const char *vsfile, const char *fsfile);

@@ -8,6 +8,71 @@
 #include "globals.h"
 #include "shader.h"
 /******************************************************************************/
+unsigned long GetFileLength(FILE *file)
+{
+	int length = 0;
+    fseek(file, 0, SEEK_END);
+	length = ftell(file);
+	rewind(file);
+	return length;
+}
+
+void ValidateShader(GLuint shader, const char* file) {
+	const unsigned int BUFFER_SIZE = 512;
+	char buffer[512];
+	GLsizei length = 0;
+    memset(buffer, 0, 512);
+
+	glGetShaderInfoLog(shader, 512, &length, buffer);
+	if (length > 0) {
+		printf("Shader %d (%s) compile error: %s\n", shader, (file?file:""), buffer);
+	}
+}
+
+int LoadShaderSource(const char* filename, GLchar** source, unsigned long* len)
+{
+   FILE *file;
+   unsigned int i=0;
+   GLchar *txt;
+   unsigned long size;
+
+   file = fopen(filename, "rb"); // opens as Binary
+   if(!file) 
+	   return -1;
+   *len = GetFileLength(file);
+   fclose(file);
+   if(*len <= 0)
+	   return -2;
+   size = *len;
+   file = fopen(filename, "r"); //Opens as ASCII
+   *source = (GLchar*)malloc(sizeof(GLchar)*(*len));
+   txt = *source;
+   if (*source == 0) return -3;   // can't reserve memory
+   
+    // len isn't always strlen cause some characters are stripped in ascii read...
+    // it is important to 0-terminate the real length later, len is just max possible value... 
+   txt[size-1] = 0; 
+
+   
+   while ((txt[i] = fgetc(file)) != EOF)
+        i++;
+    
+   txt[i] = 0;  // 0-terminate it at the correct position
+   fclose(file);
+      
+   return 0; // No Error
+}
+
+
+int UnloadShaderSource(GLchar** source)
+{
+   if (*source != 0)
+     free(*source);
+   *source = 0;
+   return 0;
+}
+
+/******************************************************************************/
 bool InitializeShader(Shader_T *s, const char *vsfile, const char *fsfile)
 {
 	bool success = true;
@@ -16,26 +81,23 @@ bool InitializeShader(Shader_T *s, const char *vsfile, const char *fsfile)
 	GLint vShaderCompiled = GL_FALSE;
 	GLint fShaderCompiled = GL_FALSE;
 	GLint programSuccess = GL_TRUE;
+	GLchar *txt;
+	unsigned long len;
 	//TODO: Fix this to use real files
-	//Get vertex source
-	const GLchar* vertexShaderSource[] =
-	{
-		"#version 400\nin vec2 LVertexPos2D; void main() { gl_Position = vec4( LVertexPos2D.x, LVertexPos2D.y, 0, 1 ); }"
-	};
-	//Get fragment source
-	const GLchar* fragmentShaderSource[] =
-	{
-		"#version 400\nout vec4 LFragment; void main() { LFragment = vec4( 1.0, 1.0, 1.0, 1.0 ); }"
-	};	
+	
 	//Generate program
 	s->id = glCreateProgram();
 	s->vertex_attrib = -1;
+	s->uv_attrib = -1;
 	//Create vertex shader
 	vertexShader = glCreateShader( GL_VERTEX_SHADER );
 	//Set vertex source
-	glShaderSource( vertexShader, 1, vertexShaderSource, NULL );
+	LoadShaderSource(vsfile, &txt, &len);
+	glShaderSource( vertexShader, 1, &txt, NULL );
 	//Compile vertex source
 	glCompileShader( vertexShader );
+	ValidateShader(vertexShader, vsfile);
+	UnloadShaderSource(&txt);
 	//Check vertex shader for errors
 	glGetShaderiv( vertexShader, GL_COMPILE_STATUS, &vShaderCompiled );
 	if( vShaderCompiled != GL_TRUE )
@@ -49,11 +111,14 @@ bool InitializeShader(Shader_T *s, const char *vsfile, const char *fsfile)
 		//Attach vertex shader to program
 		glAttachShader( s->id, vertexShader );
 		//Create fragment shader
+		LoadShaderSource(fsfile, &txt, &len);
 		fragmentShader = glCreateShader( GL_FRAGMENT_SHADER );
 		//Set fragment source
-		glShaderSource( fragmentShader, 1, fragmentShaderSource, NULL );
+		glShaderSource( fragmentShader, 1, &txt, NULL );
 		//Compile fragment source
 		glCompileShader( fragmentShader );
+		ValidateShader(fragmentShader, fsfile);
+		UnloadShaderSource(&txt);
 		//Check fragment shader for errors
 		glGetShaderiv( fragmentShader, GL_COMPILE_STATUS, &fShaderCompiled );
 		if( fShaderCompiled != GL_TRUE )
@@ -79,10 +144,16 @@ bool InitializeShader(Shader_T *s, const char *vsfile, const char *fsfile)
 			else
 			{
 				//Get vertex attribute location
-				s->vertex_attrib = glGetAttribLocation( s->id, "LVertexPos2D" );
+				s->uv_attrib = glGetAttribLocation( s->id, "vertexUV" );
+				s->vertex_attrib = glGetAttribLocation( s->id, "vertexPosition" );
 				if( s->vertex_attrib == -1 )
 				{
-					printf( "LVertexPos2D is not a valid glsl program variable!\n" );
+					printf( "vertexPosition is not a valid glsl program variable!\n" );
+					success = false;
+				}
+				if(s->uv_attrib == -1 )
+				{
+					printf( "vertexTex is not a valid glsl program variable!\n" );
 					success = false;
 				}
 			}

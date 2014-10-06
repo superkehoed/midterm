@@ -85,16 +85,19 @@
     <ClCompile Include="sprite.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="event.h" />
     <ClInclude Include="globals.h" />
     <ClInclude Include="engine.h" />
     <ClInclude Include="entity.h" />
     <ClInclude Include="graphic.h" />
     <ClInclude Include="include.h" />
+    <ClInclude Include="map.h" />
     <ClInclude Include="shader.h" />
     <ClInclude Include="sprite.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="default.fs" />
+    <None Include="default.fp" />
+    <None Include="default.vp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

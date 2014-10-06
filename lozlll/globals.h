@@ -7,15 +7,17 @@
 #ifndef __DEFINES_H
 #define __DEFINES_H
 /******************************************************************************/
-#define GAME_NAME "Legend of Zelda : Link to the Darkness"
+#define GAME_NAME "Cave of the Lightblob"
 /******************************************************************************/
 #define STARTING_NUM_SPRITES	100
 #define STARTING_NUM_ENTITIES	20
 /******************************************************************************/
 #define MAX_PARTICLES			10
+/******************************************************************************/
+#define MAX_EVENT_VARIABLES		10
 //Screen dimension constants
-#define SCREEN_WIDTH 640
-#define SCREEN_HEIGHT 480
+#define SCREEN_WIDTH 1280
+#define SCREEN_HEIGHT 960
 #define MILLISECONDS_PER_FRAME	30
 /******************************************************************************/
 /** The typedefined enumeration bringing booleans to C */
@@ -76,6 +78,10 @@ typedef struct Rect
 }Rect;
 #endif //__DEFINES_H
 /******************************************************************************/
+#define VARTYPE_INT				0
+#define VARTYPE_CHAR			1
+#define VARTYPE_BOOL			2
+#define VARTYPE_STRING			3
 /******************************************************************************/
 /******************************************************************************/
 /******************************************************************************/

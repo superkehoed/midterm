@@ -3,6 +3,8 @@
 
 #include "globals.h"
 #include "sprite.h"
+#include "event.h"
+#include "map.h"
 #include "graphic.h"
 #include "entity.h"
 #include "shader.h"

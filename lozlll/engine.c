@@ -109,10 +109,12 @@ bool Startup()
 					printf( "Unable to initialize OpenGL!\n" );
 					success = false;
 				}
+
 			}
 		}
 	}
-	//TODO: Hide mouse
+	//TODO: Enable mouse hiding in final run
+	//SDL_SetRelativeMouseMode(SDL_TRUE);
 	return success;
 }
 /******************************************************************************/
@@ -123,6 +125,7 @@ void Poll()
 {
 	//Poll for any inputs by the player at this time
 	switch(game->state){
+	case GAMESTATE_INTRO: break;
 	default: printf("Poll(): No state set!\n"); break;
 	}
 }
@@ -147,7 +150,7 @@ void Update()
 			r.w = SCREEN_WIDTH;
 			r.h = SCREEN_HEIGHT;
 			memset(&a, 0, sizeof(a));
-			SetupSprite(s, "splash.png", &r, 1, &a, 1); 
+			SetupSprite(s, "splash.bmp", &r, 1, &a, 1); 
 			SetupGraphic(e, s, GRAPHICTYPE_SPLASH, 300, GRAPHFLAG_FADE|GRAPHFLAG_FULLSCREEN);
 			AddSplashScreen(e);
 		}
@@ -229,12 +232,13 @@ bool InitializeGL()
 	};
 	//IBO data
 	GLuint indexData[] = { 0, 1, 2, 3 };
+	glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT); 
 	shader = NewShader();
 	game->shader = shader;
 	//Initialize the Shader
-	InitializeShader(shader, "shader.vs", "shader.fs");
+	InitializeShader(shader, "default.vp", "default.fp");
 	//Initialize clear color
-	glClearColor( 0.f, 0.f, 0.f, 1.f );
+	glClearColor( 1.f, 0.f, 0.f, 1.f );
 
 	//Create VBO
 	glGenBuffers( 1, &shader->VBO );
@@ -247,8 +251,9 @@ bool InitializeGL()
 	glBufferData( GL_ELEMENT_ARRAY_BUFFER, 4 * sizeof(GLuint), indexData, GL_STATIC_DRAW );
 
 	
-	glGenBuffers(1, &game->foreGraphicsVBO);
-	glGenBuffers(1, &game->backGraphicsVBO);	
+	glGenBuffers(1, &game->vertexBuffer);
+	glGenBuffers(1, &game->textureBuffer);
+	glDisable(GL_DEPTH_TEST);
 	return success;
 }
 /******************************************************************************/
@@ -263,10 +268,10 @@ void MainLoop()
 	Draw();
 	//Delay for at least one full frame-length if it wasn't already
 	if((ticks = game->currentTime - game->lastUpdate) < MILLISECONDS_PER_FRAME){
-		printf("Cycle Timer: %d\n", ticks);
+		//printf("Cycle Timer: %d\n", ticks);
 		SDL_Delay(URANGE(1, MILLISECONDS_PER_FRAME -ticks, MILLISECONDS_PER_FRAME));
-	}else
-		printf("Cycle Timer: %d\n", game->currentTime - game->lastUpdate);
+	}
+	//else printf("Cycle Timer: %d\n", game->currentTime - game->lastUpdate);
 	return;
 }
 /******************************************************************************/
@@ -297,7 +302,7 @@ GLuint LoadTex(const char *name)
 	GLenum texture_format;
 	GLint  nOfColors;
  
-	if ( (surface = IMG_Load(name)) ) { 
+	if ( (surface = SDL_LoadBMP(name)) ) { 
  
 		// Check that the image's width is a power of 2
 		if ( (surface->w & (surface->w - 1)) != 0 ) {
