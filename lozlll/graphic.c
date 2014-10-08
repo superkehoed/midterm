@@ -9,18 +9,31 @@ void DrawGraphic(Entity_T *graphic)
 	GLfloat verts[8];
 	GLfloat UVs[8];
 	GLuint texloc;
+	GLuint transp;
+	GLfloat completion;
+
 	if(graphic->type != ENTYPE_GRAPHIC){
 		//Generate an error
 		return;
 	}
-	
+	transp = glGetUniformLocation(game->shader->id, "transparency");
+	//Check to make sure this isn't an indefinite animation for fades
+	if(graphic->display.endTime != 0)
+		completion = (float)(game->currentTime - graphic->display.startTime)
+			/ (graphic->display.endTime - graphic->display.startTime);
+	else
+		completion = (game->currentTime - graphic->display.startTime) / 3000.0f;
+
 	if(IS_SET(graphic->display.flags, GRAPHFLAG_FULLSCREEN)){
 		verts[0] = -1.0f;
 		verts[1] = -1.0f;
+		
 		verts[2] = -1.0f;
 		verts[3] = 1.0f;
+		
 		verts[4] = 1.0f;
 		verts[5] = 1.0f;
+		
 		verts[6] = 1.0f;
 		verts[7] = -1.0f;
 		//Now the texture coordinates
@@ -34,15 +47,35 @@ void DrawGraphic(Entity_T *graphic)
 		UVs[7] = 1.0f;
 	}else{
 		verts[0] = graphic->pos.x;
-		verts[1] = 0;
-		verts[2] = graphic->pos.x + graphic->sprite->frames[graphic->currentFrame].w;
-		verts[3] = 0;
-		verts[4] = verts[2];
-		verts[5] = graphic->pos.y + graphic->sprite->frames[graphic->currentFrame].y;
-		verts[6] = 0;
-		verts[7] = verts[5];
+		verts[1] = graphic->pos.y;
+
+		verts[2] = verts[0];
+		verts[3] = graphic->pos.y + graphic->size.y;
+
+		verts[4] = graphic->pos.x + graphic->size.x;
+		verts[5] = verts[3];
+		
+		verts[6] = verts[4];
+		verts[7] = verts[1];
+		
+		UVs[0] = 0.0f;
+		UVs[1] = 1.0f;
+		UVs[2] = 0.0f;
+		UVs[3] = 0.0f;
+		UVs[4] = 1.0f;
+		UVs[5] = 0.0f;
+		UVs[6] = 1.0f;
+		UVs[7] = 1.0f;
 	}
 
+	if(IS_SET(graphic->display.flags, GRAPHFLAG_FADE_IN) && completion < .33){
+		  glProgramUniform1f(game->shader->id, transp, 1 - 3*completion); 
+	}
+	if(IS_SET(graphic->display.flags, GRAPHFLAG_FADE_OUT) 
+	&& graphic->display.endTime != 0
+	&& completion > .66){
+		  glProgramUniform1f(game->shader->id, transp, -2 + 3*completion); 
+	}
 	//Create VBO
 	glBindBuffer( GL_ARRAY_BUFFER, game->vertexBuffer );
 	//Buffer the VBO with the new vertices
@@ -71,10 +104,13 @@ void SetupGraphic(Entity_T *ent, Sprite_T *sprite, short type, GLuint timer, lon
 {
 	ent->sprite = sprite;
 	ent->type = ENTYPE_GRAPHIC;
-	ent->nextFrame = -1;
+	ent->nextFrame = 0;
 	ent->currentFrame = 0;
 	ent->display.startTime = game->currentTime;
-	ent->display.endTime = game->currentTime + timer;
+	if(timer == 0)
+		ent->display.endTime = timer;
+	else
+		ent->display.endTime = game->currentTime + timer;
 	ent->display.type = type;
 	ent->display.flags = flags;
 }

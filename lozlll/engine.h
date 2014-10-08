@@ -12,6 +12,9 @@
 #define GAMESTATE_PLAYING			5
 #define GAMESTATE_GAME_MENU			6
 /******************************************************************************/
+#define GAMEFLAG_SETUP_STATE		0x1
+#define GAMEFLAG_SELECTING			0x2
+/******************************************************************************/
 /** Basic structure for handling a game engine */
 typedef struct Engine_T{
 	bool done; /**< Is the game done running */
@@ -26,7 +29,8 @@ typedef struct Engine_T{
 	Entity_T *splashScreensHead; /** The splash screens for the game */
 	GLuint	vertexBuffer; /**< The vertex buffer object*/
 	GLuint	textureBuffer; /**< The UV buffer object*/
-
+	int selection; /**< The current menu selection */
+	long flags; /**< The current gamestate related flags */
 	int state; /**< The current gamestate */
 	int entityCount; /**< The current global count for entities */
 	int spriteCount; /**< The current global count for sprites */
@@ -42,6 +46,10 @@ bool InitializeGL();
 void Shutdown();
 void MainLoop();
 void AddSplashScreen(Entity_T *e);
+void UpdateForeGraphics();
+void UpdateBackGraphics();
+void DequeueForeGraphics(bool free);
+void DequeueBackGraphics(bool free);
 GLuint LoadTex(const char *name);
 /******************************************************************************/
 //Externals

@@ -3,7 +3,7 @@
 // Input vertex data, different for all executions of this shader.
 in vec2 vertexUV;
 in vec2 vertexPosition;
-
+uniform float transparency;
  
 // Output data ; will be interpolated for each fragment.
 out vec2 UV;

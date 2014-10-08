@@ -38,8 +38,8 @@ extern struct Engine_T *game;
 #define URANGE(a, b, c) UMIN(c, UMAX(a, b))
 
 #define IS_SET(a, b) (a & b)
-#define SET_BIT(a, b) (a |= b)
-#define REMOVE_BIT(a, b) (a &= ~b)
+#define SET_FLAG(a, b) (a |= b)
+#define REMOVE_FLAG(a, b) (a &= ~b)
 /******************************************************************************/
 typedef struct Vec2D
 {

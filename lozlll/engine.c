@@ -37,6 +37,7 @@ bool Startup()
 	gUnusedEntityList = NULL;
 	//Engine initialization
 	game->state = GAMESTATE_INTRO;
+	game->flags = GAMEFLAG_SETUP_STATE;
 	game->entityCount = 0;
 	game->spriteCount = 0;
 	game->lastUpdate = 0;
@@ -45,6 +46,7 @@ bool Startup()
 	game->foreGraphicsTail = NULL;
 	game->backGraphicsHead = NULL;
 	game->backGraphicsTail = NULL;
+	game->selection = 0;
 	game->done = false;
 	//Reserve the memory necessary for entities and set up the unused entity list
 	ent = (Entity_T *)malloc(sizeof(Entity_T)*STARTING_NUM_ENTITIES);
@@ -113,8 +115,7 @@ bool Startup()
 			}
 		}
 	}
-	//TODO: Enable mouse hiding in final run
-	//SDL_SetRelativeMouseMode(SDL_TRUE);
+	SDL_SetRelativeMouseMode(SDL_TRUE);
 	return success;
 }
 /******************************************************************************/
@@ -123,9 +124,55 @@ bool Startup()
  */
 void Poll()
 {
+	SDL_Event e;
 	//Poll for any inputs by the player at this time
 	switch(game->state){
-	case GAMESTATE_INTRO: break;
+	case GAMESTATE_INTRO: 
+		//Nope, make them sit through it all.
+		break;
+	case GAMESTATE_MAIN_MENU: 
+		while(SDL_PollEvent(&e)){
+			if(e.type == SDL_KEYDOWN){
+				switch(e.key.keysym.sym){
+				case SDLK_UP: 
+				case SDLK_DOWN: 
+					game->selection = (game->selection + 1) % 2;
+					//TODO: Hackish, find a cleaner way of doing this.
+					game->foreGraphicsTail->pos.y = -.3 - .2 * game->selection;
+					break;
+				case SDLK_SPACE: 
+					SET_FLAG(game->flags, GAMEFLAG_SELECTING);
+					break;
+				case SDLK_ESCAPE:
+					game->done = true;
+					break;
+				}
+			}else if(e.type == SDL_QUIT){
+				game->done = true;
+			}
+		}
+		break;
+	case GAMESTATE_PLAYING:
+		//TODO: Midterm - See list below
+		//Poll for events ove rand over
+		//If pressing direction, set walk bit for that direction
+		//If pressing ctrl, set attack bit
+		//If pressing alt, set secondary bit
+		//If pressing space, set use bit
+		//If pressing escape, bring up menu
+		break;
+	case GAMESTATE_CREDITS:
+		while(SDL_PollEvent(&e)){
+			if(e.type == SDL_KEYDOWN){
+				if(e.key.keysym.sym == SDLK_ESCAPE){ 
+					SET_FLAG(game->flags, GAMEFLAG_SETUP_STATE);
+					game->state = GAMESTATE_MAIN_MENU;
+				}
+			}if(e.type == SDL_QUIT){
+				game->done = true;
+			}
+		}
+		break;
 	default: printf("Poll(): No state set!\n"); break;
 	}
 }
@@ -139,21 +186,87 @@ void Update()
 	Sprite_T *s;
 	Rect r;
 	Animation_T a;
+	r.x = 0;
+	r.y = 0;
+	r.w = SCREEN_WIDTH;
+	r.h = SCREEN_HEIGHT;
+	memset(&a, 0, sizeof(a));
 	game->currentTime = SDL_GetTicks();
 	switch(game->state){
 	case GAMESTATE_INTRO:
-		if(game->foreGraphicsHead == NULL){
+		if(IS_SET(game->flags, GAMEFLAG_SETUP_STATE)){
 			e = NewEntity();
 			s = NewSprite();
-			r.x = 0;
-			r.y = 0;
-			r.w = SCREEN_WIDTH;
-			r.h = SCREEN_HEIGHT;
-			memset(&a, 0, sizeof(a));
-			SetupSprite(s, "splash.bmp", &r, 1, &a, 1); 
-			SetupGraphic(e, s, GRAPHICTYPE_SPLASH, 300, GRAPHFLAG_FADE|GRAPHFLAG_FULLSCREEN);
+			SetupSprite(s, "splash.png", &r, 1, &a, 1); 
+			SetupGraphic(e, s, GRAPHICTYPE_SPLASH, 8000, GRAPHFLAG_FADE|GRAPHFLAG_FULLSCREEN);
 			AddSplashScreen(e);
+			REMOVE_FLAG(game->flags, GAMEFLAG_SETUP_STATE);
 		}
+		UpdateForeGraphics();
+		if(game->foreGraphicsHead == NULL){
+			game->state = GAMESTATE_MAIN_MENU;
+			SET_FLAG(game->flags, GAMEFLAG_SETUP_STATE);
+		}
+		break;
+	case GAMESTATE_MAIN_MENU:
+		if(IS_SET(game->flags, GAMEFLAG_SETUP_STATE)){
+			//TODO: Encapsulate this behavior later into a formal menu system
+			e = NewEntity();
+			s = NewSprite();
+			SetupSprite(s, "main_menu.png", &r, 1, &a, 1);
+			SetupGraphic(e, s, GRAPHICTYPE_SPLASH, 0, GRAPHFLAG_FADE_IN|GRAPHFLAG_FULLSCREEN);
+			AddSplashScreen(e);
+			e = NewEntity();
+			s = NewSprite();
+			SetupSprite(s, "cursor.png", &r, 1, &a, 1);
+			s->frames[0].w = 1;
+			s->frames[0].h = 1;
+			SetupGraphic(e, s, GRAPHICTYPE_ELEMENT, 0, GRAPHFLAG_FADE_IN);
+			e->pos.x = -.55f;
+			e->pos.y = -.30f;
+			e->pos.z = 0.0f;
+			e->size.x = .1f;
+			e->size.y = .1f;
+			game->foreGraphicsTail->next = e;
+			game->foreGraphicsTail = e;
+			REMOVE_FLAG(game->flags, GAMEFLAG_SETUP_STATE);
+		}else{
+			if(IS_SET(game->flags, GAMEFLAG_SELECTING)){
+				REMOVE_FLAG(game->flags, GAMEFLAG_SELECTING);
+				switch(game->selection){
+				case 0: //New Game
+					game->state = GAMESTATE_PLAYING;
+					SET_FLAG(game->flags, GAMEFLAG_SETUP_STATE);
+					break;
+				case 1: //Credits
+					game->state = GAMESTATE_CREDITS;
+					SET_FLAG(game->flags, GAMEFLAG_SETUP_STATE);
+					break;
+				}
+				DequeueForeGraphics(true);
+				DequeueBackGraphics(true);
+			}
+		}
+		break;
+	case GAMESTATE_PLAYING:
+		//TODO: Midterm - See list below
+		//Check to see if the player is done walking
+		//Check to see if the player is done attacking
+		//Update any mobs that are on the map
+		//Update any world events that are pending
+		break;
+	case GAMESTATE_GAME_MENU:
+		//TODO: Midterm - See list below
+		//SETUP
+		//Load the main menu, static image for now
+		//Load the selector and position it over point 1
+		//STANDARD BEHAVIOR
+		//Handle if player has selected something
+		//If the player is mid-selection, freeze input until animation done
+		break;
+	case GAMESTATE_CREDITS:
+		//TODO: Midterm - See list below
+		//Fade in a credits page
 		break;
 	default: printf("Update(): No state set!\n"); break;
 	}
@@ -167,6 +280,7 @@ void Update()
 void Draw()
 {
 	Entity_T *e;
+	bool swap = false;
 	if(game->shader == NULL){
 		printf("Draw(): No shader has been assigned to the game engine!");
 		return;
@@ -175,41 +289,51 @@ void Draw()
 	switch(game->state){
 	case GAMESTATE_INTRO:
 		//Draw the current splash screen
-		//Clear color buffer
 		glClear( GL_COLOR_BUFFER_BIT );
-		//Bind program
+		glUseProgram( game->shader->id );
+		DrawGraphic(game->foreGraphicsHead);
+		glUseProgram( (GLuint)NULL );
+		swap = true;
+		break;
+	case GAMESTATE_MAIN_MENU:
+		//TODO: Midterm - See list below
+		//Draw the current selector
+		glClear( GL_COLOR_BUFFER_BIT );
 		glUseProgram( game->shader->id );
 		for(e = game->foreGraphicsHead;e != NULL;e = e->next)
 			DrawGraphic(e);
-		//Unbind program
 		glUseProgram( (GLuint)NULL );
-		SDL_GL_SwapWindow( game->window );
-		break;
-	case GAMESTATE_MAIN_MENU:
-		//Draw the background
-		//Draw the title
-		//Draw the menu list
-		//Draw the current selector
+		swap = true;
 		break;
 	case GAMESTATE_PLAYING:
+		//TODO: Midterm - See list below
 		//Draw the current map
 		//Draw particle effects
 		//Draw the HUD
 		break;
 	case GAMESTATE_GAME_MENU:
+		//TODO: Midterm - See list below
 		//Draw the background
 		//Draw the item list
 		//List stats
+		//Draw the selector positioned at point n
 		break;
 	case GAMESTATE_CREDITS:
-		//Draw the background
+		//TODO: Midterm - See list below
 		//Draw the credits
+		glClear( GL_COLOR_BUFFER_BIT );
+		glUseProgram( game->shader->id );
+		//if(game->foreGraphicsHead != NULL)
+		//	DrawGraphic(game->foreGraphicsHead);
+		glUseProgram( (GLuint)NULL );
+		swap = true;
 		break;
 	default: 
 		printf("Draw(): No state set!\n"); 
 		break;
 	}
-	//Draw all of the entities for the game
+	if(swap)
+		SDL_GL_SwapWindow( game->window );
 }
 /******************************************************************************/
 /**Initializes GL and sets up a shader for the engine
@@ -238,7 +362,7 @@ bool InitializeGL()
 	//Initialize the Shader
 	InitializeShader(shader, "default.vp", "default.fp");
 	//Initialize clear color
-	glClearColor( 1.f, 0.f, 0.f, 1.f );
+	glClearColor( 0.f, 0.f, 0.f, 1.f );
 
 	//Create VBO
 	glGenBuffers( 1, &shader->VBO );
@@ -254,6 +378,9 @@ bool InitializeGL()
 	glGenBuffers(1, &game->vertexBuffer);
 	glGenBuffers(1, &game->textureBuffer);
 	glDisable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
+	glBlendEquation(GL_FUNC_ADD);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	return success;
 }
 /******************************************************************************/
@@ -302,7 +429,7 @@ GLuint LoadTex(const char *name)
 	GLenum texture_format;
 	GLint  nOfColors;
  
-	if ( (surface = SDL_LoadBMP(name)) ) { 
+	if ( (surface = IMG_Load(name)) ) { 
  
 		// Check that the image's width is a power of 2
 		if ( (surface->w & (surface->w - 1)) != 0 ) {
@@ -365,6 +492,7 @@ void AddSplashScreen(Entity_T *e)
 	if(game->foreGraphicsHead == NULL){
 		game->foreGraphicsHead = e;
 		game->foreGraphicsTail = e;
+		e->next = NULL;
 	}else{
 		if(game->foreGraphicsTail == NULL){
 			//Generate an error, tail is missing
@@ -394,5 +522,63 @@ void RemoveSplashScreen(Entity_T *e)
 		}
 	}
 }
+/******************************************************************************/
+void UpdateForeGraphics()
+{
+	Entity_T *e, *NextEntity;
+	for(e = game->foreGraphicsHead;e != NULL;e = NextEntity){
+		NextEntity = e->next;
+		if(e->type == ENTYPE_GRAPHIC
+		&& e->display.endTime != 0
+		&& e->display.endTime < game->currentTime){
+			game->foreGraphicsHead = e->next;
+			FreeEntity(e);
+		}
+	}
+}
+/******************************************************************************/
+void UpdateBackGraphics()
+{
+	Entity_T *e, *NextEntity;
+	for(e = game->backGraphicsHead;e != NULL;e = NextEntity){
+		NextEntity = e->next;
+		if(e->type == ENTYPE_GRAPHIC
+		&& e->display.endTime != 0
+		&& e->display.endTime < game->currentTime){
+			game->backGraphicsHead = e->next;
+			if(game->backGraphicsTail == e)
+				game->backGraphicsTail = NULL;
+			FreeEntity(e);
+		}
+	}
+}
+/******************************************************************************/
+void DequeueForeGraphics(bool free)
+{
+	Entity_T *e, *NextEntity;
+	for(e = game->foreGraphicsHead;e != NULL;e = NextEntity){
+		NextEntity = e->next;
+		if(game->foreGraphicsTail == e)
+			game->foreGraphicsTail = NULL;
+		if(free)
+			FreeEntity(e);
+	}
+	game->foreGraphicsHead = NULL;
+
+}
+/******************************************************************************/
+void DequeueBackGraphics(bool free)
+{
+	Entity_T *e, *NextEntity;
+	for(e = game->backGraphicsHead;e != NULL;e = NextEntity){
+		NextEntity = e->next;
+		if(game->backGraphicsTail == e)
+			game->backGraphicsTail = NULL;
+		if(free)
+			FreeEntity(e);
+	}
+	game->backGraphicsHead = NULL;
+}
+/******************************************************************************/
 /******************************************************************************/
 /******************************************************************************/

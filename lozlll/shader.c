@@ -82,9 +82,7 @@ bool InitializeShader(Shader_T *s, const char *vsfile, const char *fsfile)
 	GLint fShaderCompiled = GL_FALSE;
 	GLint programSuccess = GL_TRUE;
 	GLchar *txt;
-	unsigned long len;
-	//TODO: Fix this to use real files
-	
+	unsigned long len;	
 	//Generate program
 	s->id = glCreateProgram();
 	s->vertex_attrib = -1;

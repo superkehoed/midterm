@@ -13,6 +13,7 @@
 
 typedef struct Entity_T{
 	short type;
+	Vec2D size;
 	Vec3D pos;
 	Vec3D velocity;
 	Vec3D acceleration;
