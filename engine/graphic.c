@@ -76,8 +76,8 @@ void DrawGraphic(Entity_T *graphic)
 	&& completion > .66){
 		  glProgramUniform1f(game->shader->id, transp, -2 + 3*completion); 
 	}
-	//Create VBO
-	glBindBuffer( GL_ARRAY_BUFFER, game->vertexBuffer );
+	//Bind VBO
+	glBindBuffer( GL_ARRAY_BUFFER, game->shader->vertexBuffer );
 	//Buffer the VBO with the new vertices
 	glBufferData( GL_ARRAY_BUFFER, 8 * sizeof(GLfloat), verts, GL_STATIC_DRAW );
 	//Set the uniform up for the texture
@@ -91,7 +91,7 @@ void DrawGraphic(Entity_T *graphic)
 	glVertexAttribPointer( game->shader->vertex_attrib, 2, GL_FLOAT, GL_FALSE, 0, NULL );
 	//Enable texture UVs
 	glEnableVertexAttribArray( game->shader->uv_attrib );
-	glBindBuffer( GL_ARRAY_BUFFER, game->textureBuffer );
+	glBindBuffer( GL_ARRAY_BUFFER, game->shader->textureBuffer );
 	glBufferData( GL_ARRAY_BUFFER, 8 * sizeof(GLfloat), UVs, GL_STATIC_DRAW );
 	glVertexAttribPointer( game->shader->uv_attrib, 2, GL_FLOAT, GL_FALSE, 0, NULL );
 	glDrawArrays( GL_TRIANGLE_STRIP, 0, 4);

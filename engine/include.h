@@ -2,6 +2,7 @@
 #define __INCLUDE_H
 
 #include "globals.h"
+#include "light.h"
 #include "sprite.h"
 #include "event.h"
 #include "map.h"

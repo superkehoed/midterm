@@ -4,15 +4,15 @@
 in vec2 vertexUV;
 in vec2 vertexPosition;
 uniform float transparency;
- 
 // Output data ; will be interpolated for each fragment.
-out vec2 UV;
- 
+layout(location = 0)out vec2 UV;
+layout(location = 1)out float entlight;
+
+uniform float innerlight;
 void main(){
  
     // Output position of the vertex, in clip space : MVP * position
     gl_Position =  vec4(vertexPosition,0,1);
- 
     // UV of the vertex. No special space for this one.
     UV = vertexUV;
 }

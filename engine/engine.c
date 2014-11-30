@@ -41,8 +41,14 @@ bool Startup()
 	game->foreGraphicsTail = NULL;
 	game->backGraphicsHead = NULL;
 	game->backGraphicsTail = NULL;
+	game->map = NULL;
 	game->selection = 0;
 	game->done = false;
+	game->mapBatch.num_vertices = 0;
+	game->mapBatch.num_indices = 0;
+	game->entBatch.num_vertices = 0;
+	game->entBatch.num_indices = 0;
+	game->darkness = .9f;
 	//Reserve the memory necessary for entities and set up the unused entity list
 	ent = (Entity_T *)malloc(sizeof(Entity_T)*STARTING_NUM_ENTITIES);
 	for(i = 0;i < STARTING_NUM_ENTITIES;i++){
@@ -69,7 +75,7 @@ bool Startup()
 
 		//Create window
 		game->window = SDL_CreateWindow( GAME_NAME, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 
-									SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN );
+									SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_OPENGL);
 		if( game->window == NULL )
 		{
 			printf( "Window could not be created! SDL Error: %s\n", SDL_GetError() );
@@ -120,6 +126,7 @@ bool Startup()
 void Poll()
 {
 	SDL_Event e;
+	Vec2f pos;
 	//Poll for any inputs by the player at this time
 	switch(game->state){
 	case GAMESTATE_INTRO: 
@@ -148,9 +155,59 @@ void Poll()
 		}
 		break;
 	case GAMESTATE_PLAYING:
+		if(game->hero != NULL)
+		{
+			pos.x = game->hero->pos.x;
+			pos.y = game->hero->pos.y;
+		}
 		//TODO: Midterm - See list below
 		//Poll for events over and over
-		//If pressing direction, set walk bit for that direction
+		while(SDL_PollEvent(&e)){
+			if(e.type == SDL_KEYDOWN){
+				switch(e.key.keysym.sym){
+				case SDLK_UP:
+					WalkEntity(game->hero, ENTDIR_UP);
+					break;
+				case SDLK_DOWN:
+					WalkEntity(game->hero, ENTDIR_DOWN);
+					break;
+				case SDLK_LEFT:
+					WalkEntity(game->hero, ENTDIR_LEFT);
+					break;
+				case SDLK_RIGHT:
+					WalkEntity(game->hero, ENTDIR_RIGHT);
+					break;
+				case SDLK_ESCAPE:
+					game->done = true;
+					break;
+				case SDLK_q:
+					game->darkness+=.01f;
+					break;
+				case SDLK_w:
+					game->darkness-=.01f;
+					break;
+				case SDLK_t:
+					pos.y-=TILE_HEIGHT;
+					MoveEntity(game->hero, game->map, pos);
+					break;
+				case SDLK_g:
+					pos.y+=TILE_HEIGHT;
+					MoveEntity(game->hero, game->map, pos);
+					break;
+				case SDLK_f:
+					pos.x-=TILE_WIDTH;
+					MoveEntity(game->hero, game->map, pos);
+					break;
+				case SDLK_h:
+					pos.x+=TILE_WIDTH;
+					MoveEntity(game->hero, game->map, pos);
+					break;
+				}
+			}
+			if(e.type == SDL_QUIT){
+				game->done = true;
+			}
+		}	
 		//If pressing ctrl, set attack bit
 		//If pressing alt, set secondary bit
 		//If pressing space, set use bit
@@ -177,23 +234,24 @@ void Poll()
 void Update()
 {
 	Map_T *map;
-	Entity_T *e;
+	Entity_T *e, *e_next;
 	Sprite_T *s;
 	Rect r;
+	GLuint x, y;
 	Animation_T a;
+	GLuint delta = game->currentTime - game->lastUpdate;
 	r.x = 0;
 	r.y = 0;
 	r.w = SCREEN_WIDTH;
 	r.h = SCREEN_HEIGHT;
 	memset(&a, 0, sizeof(a));
-	game->currentTime = SDL_GetTicks();
 	switch(game->state){
 	case GAMESTATE_INTRO:
 		if(IS_SET(game->flags, GAMEFLAG_SETUP_STATE)){
 			e = NewEntity();
 			s = NewSprite();
 			SetupSprite(s, "splash.png", &r, 1, &a, 1); 
-			SetupGraphic(e, s, GRAPHICTYPE_SPLASH, 8000, GRAPHFLAG_FADE|GRAPHFLAG_FULLSCREEN);
+			SetupGraphic(e, s, GRAPHICTYPE_SPLASH, 1000, GRAPHFLAG_FADE|GRAPHFLAG_FULLSCREEN);
 			AddSplashScreen(e);
 			REMOVE_FLAG(game->flags, GAMEFLAG_SETUP_STATE);
 		}
@@ -247,13 +305,19 @@ void Update()
 		//TODO: Midterm - See list below
 		if(IS_SET(game->flags, GAMEFLAG_SETUP_STATE))
 		{
-			e = NewEntity();
 			//Set up the hero
-			game->hero = e;
+			game->hero = SetupHero();
 			map = StartMap();
 			game->map = map;
-			MoveEntity(e, map, map->start);
+			MoveEntity(game->hero, map, map->start);
+			REMOVE_FLAG(game->flags, GAMEFLAG_SETUP_STATE);
 		}
+		for(x = 0;x < MAX_MAP_WIDTH;x++)
+			for(y = 0;y < MAX_MAP_HEIGHT;y++)
+				for(e = game->map->tiles[x][y].entities; e; e = e_next){
+					e_next = e->next;
+					UpdateEntity(e, delta);
+				}
 		//Check to see if the player is done walking
 		//Check to see if the player is done attacking
 		//Update any mobs that are on the map
@@ -292,7 +356,6 @@ void Update()
 	default: printf("Update(): No state set!\n"); break;
 	}
 	//Go through the current map and update all entities
-	game->lastUpdate = game->currentTime;
 }
 /******************************************************************************/
 /** The drawing method for the engine
@@ -301,6 +364,7 @@ void Update()
 void Draw()
 {
 	Entity_T *e;
+	Vec2f offset;
 	bool swap = false;
 	if(game->shader == NULL){
 		printf("Draw(): No shader has been assigned to the game engine!");
@@ -326,7 +390,21 @@ void Draw()
 	case GAMESTATE_PLAYING:
 		//TODO: Midterm - See list below
 		//Draw the current map
-		//Draw particle effects
+		glClear( GL_COLOR_BUFFER_BIT );
+		if(game->map != NULL){
+			ResetBatch(&game->mapBatch);
+			offset.x = game->hero->pos.x;
+			offset.y = game->hero->pos.y;
+			BatchScreenMap(&game->mapBatch, game->map, Vec3fToVec2f(game->hero->pos));
+			DrawBatch(&game->mapBatch, game->shader);
+			ResetBatch(&game->entBatch);
+			BatchScreenEntities(&game->entBatch, game->map, Vec3fToVec2f(game->hero->pos));
+			DrawBatch(&game->entBatch, game->shader);
+		}
+		
+		swap = true;
+		//Set up the VBO, UVs and VIO
+		//Draw particle/light effects
 		//Draw the HUD
 		break;
 	case GAMESTATE_GAME_MENU:
@@ -391,14 +469,14 @@ bool InitializeGL()
 	glGenBuffers( 1, &shader->IBO );
 	glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, shader->IBO );
 	glBufferData( GL_ELEMENT_ARRAY_BUFFER, 4 * sizeof(GLuint), indexData, GL_STATIC_DRAW );
-
-	
-	glGenBuffers(1, &game->vertexBuffer);
-	glGenBuffers(1, &game->textureBuffer);
+	glGenBuffers(1, &shader->vertexBuffer);
+	glGenBuffers(1, &shader->textureBuffer);
+	glGenBuffers(1, &shader->indexBuffer);
 	glDisable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
 	glBlendEquation(GL_FUNC_ADD);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_PRIMITIVE_RESTART);
 	glPrimitiveRestartIndex(RESET_INDEX);
 	return success;
 }
@@ -408,14 +486,15 @@ bool InitializeGL()
  */
 void MainLoop()
 {
-	Uint32 ticks;
+	game->lastUpdate = game->currentTime;
+	game->currentTime = SDL_GetTicks();
 	Poll();
 	Update();
 	Draw();
 	//Delay for at least one full frame-length if it wasn't already
-	if((ticks = game->currentTime - game->lastUpdate) < MILLISECONDS_PER_FRAME){
+	if( game->currentTime - game->lastUpdate < MILLISECONDS_PER_FRAME){
 		//printf("Cycle Timer: %d\n", ticks);
-		SDL_Delay(URANGE(1, MILLISECONDS_PER_FRAME -ticks, MILLISECONDS_PER_FRAME));
+		SDL_Delay(URANGE(1, MILLISECONDS_PER_FRAME - game->currentTime + game->lastUpdate, MILLISECONDS_PER_FRAME));
 	}
 	//else printf("Cycle Timer: %d\n", game->currentTime - game->lastUpdate);
 	return;
@@ -556,6 +635,52 @@ GLuint LoadTex(const char *name)
 	}
 	return texture;
 }
+/** Turns an SDL surface into an OpenGL Texture
+ * @param surface The surface to be converted
+ * @return A GLuint representing the new texture
+ */
+GLuint SurfaceToTexture(SDL_Surface *surface)
+{
+	int nOfColors;
+	GLuint texture;
+	GLenum texture_format;
+	// get the number of channels in the SDL surface
+	nOfColors = surface->format->BytesPerPixel;
+	if (nOfColors == 4)     // contains an alpha channel
+	{
+			if (surface->format->Rmask == 0x000000ff)
+					texture_format = GL_RGBA;
+			else
+					texture_format = GL_BGRA;
+	} else if (nOfColors == 3)     // no alpha channel
+	{
+			if (surface->format->Rmask == 0x000000ff)
+					texture_format = GL_RGB;
+			else
+					texture_format = GL_BGR;
+	} else {
+			printf("warning: the image is not truecolor..  this will probably break\n");
+			// this error should not go unhandled
+	}
+	// Have OpenGL generate a texture object handle for us
+	glGenTextures( 1, &texture );
+ 
+	// Bind the texture object
+	glBindTexture( GL_TEXTURE_2D, texture );
+ 
+	// Set the texture's stretching properties
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+ 
+	//Invert the texture
+	SDL_InvertSurface(surface);
+	// Edit the texture object's image data using the information SDL_Surface gives us
+	glTexImage2D( GL_TEXTURE_2D, 0, nOfColors, surface->w, surface->h, 0,
+						texture_format, GL_UNSIGNED_BYTE, surface->pixels );
+	if(surface)
+		SDL_FreeSurface(surface);
+	return texture;
+}
 /******************************************************************************/
 void AddSplashScreen(Entity_T *e)
 {
@@ -651,5 +776,16 @@ void DequeueBackGraphics(bool free)
 	game->backGraphicsHead = NULL;
 }
 /******************************************************************************/
+GLuint Random(GLuint num)
+{
+	return rand() % num;
+}
 /******************************************************************************/
+Vec2f Vec3fToVec2f(Vec3f vec)
+{
+	Vec2f nvec;
+	nvec.x = vec.x;
+	nvec.y = vec.y;
+	return nvec;
+}
 /******************************************************************************/

@@ -7,10 +7,14 @@
  * @author Ulysee Thompson
  */
 /******************************************************************************/
+#include <GL/glew.h>
 #include <SDL.h>
 #include <SDL_opengl.h>
+#include <SDL_image.h>
 #include <GL/GLU.h>
+#include <stdio.h>
 #include "include.h"
+
 /******************************************************************************/
 /** Linked list storing any unused Sprite_T objects */
 Sprite_T *gUnusedSpriteList;
@@ -52,13 +56,51 @@ void SetupSprite(Sprite_T *s, const char *file,
 {
 	int i;
 	s->texId = LoadTex(file);
+		
 	for(i = 0;i < frame_num;i++)
 		s->frames[i] = frames[i];
-	for(i = 0;i < frame_num;i++)
-		s->animations[i] = animations[i];
+	for(i = 0;i < anim_num;i++)
+		s->animations[i]= animations[i];
 	return;
 }
 /******************************************************************************/
+Sprite_T *CreateBasicSprite(const char *filename, Vec2i frame_size)
+{
+	int x, y;
+	int frames_per_row;
+	Rect r;
+	Sprite_T *s = NewSprite();
+	SDL_Surface *surf;
+	
+	if((surf = IMG_Load(filename)) == NULL)
+	{
+		printf("CreateBasicSprite(): %s failed to load!", filename);
+		return NULL;
+	}
+	//SDL_InvertSurface(surf);
+	r.w = (GLfloat)frame_size.x / (GLfloat)surf->w;
+	r.h = (GLfloat)frame_size.y / (GLfloat)surf->h;
+	s->numFrames = 0;
+	frames_per_row = surf->w / frame_size.x;
+	for(y = 0;y < surf->h / frame_size.y;y++)
+		for(x = 0;x < surf->w / frame_size.x;x++)
+		{
+			r.x = x * r.w;
+			r.y = 1.0f - (y+1) * r.h;
+			s->frames[x+y*frames_per_row] = r;
+			s->numFrames++;
+		}
+	s->numAnimations = 0;
+	s->texId = SurfaceToTexture(surf);
+	return s;
+}
 /******************************************************************************/
+void GetSpriteUVs(Sprite_T *s, GLuint frame, Vec2f *ll, Vec2f *ur)
+{
+	ll->x = s->frames[frame].x;
+	ll->y = s->frames[frame].y;
+	ur->x = s->frames[frame].x + s->frames[frame].w;
+	ur->y = s->frames[frame].y + s->frames[frame].h;
+}
 /******************************************************************************/
 /******************************************************************************/

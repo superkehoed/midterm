@@ -61,12 +61,45 @@ Map_T *BlankMap()
 
 Map_T *StartMap()
 {
+	Entity_T *e;
 	int x, y;
+	Vec2i s;
+	Vec2f p;
 	Map_T *map = BlankMap();
-	map->start.x = 1;
-	map->start.y = 1;
+	
+	
+	GLuint tiles[] =
+	{ 
+	  38, 39, 39, 39, 40,
+	  54, 55, 55, 56, 56,
+	  54, 55, 55, 56, 56,
+	  54, 55, 55, 56, 56,
+	  70, 71, 71, 71, 72
+	};
+	e = SetupMonster(0);
+
+
 	for(x = 0;x < 5;x++)
 		for(y = 0;y < 5;y++)
-			map->tiles[x][y].num = 1;
+			map->tiles[x][y].num = tiles[x+y*5];
+	s.x = 32;
+	s.y = 32;
+	map->tilesheet = CreateBasicSprite("tiles.png", s);
+	/*map->start.x = 2;
+	map->start.y = 2;
+	s.x = 3;
+	s.y = 3;
+	*/
+	for(x = 0;x < 100;x++)
+		for(y = 0;y < 100;y++)
+			map->tiles[x][y].num = 55;
+	e = SetupMonster(0);
+	map->start.x = 25;
+	map->start.y = 25;
+	p.x = 30;
+	p.y = 30;
+	MoveEntity(e, map, p);
+	e->Think = &(MonsterHunt);
+	e->nextThink = game->currentTime + 1000;
 	return map;
 }

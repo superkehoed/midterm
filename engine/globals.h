@@ -12,6 +12,7 @@
 #define RESET_INDEX				0xFFFFFFFF
 #define STARTING_NUM_SPRITES	100
 #define STARTING_NUM_ENTITIES	20
+#define TOTAL_DARKNESS			0.9f
 /******************************************************************************/
 #define MAX_PARTICLES			10
 /******************************************************************************/
@@ -21,12 +22,12 @@
 #define SCREEN_HEIGHT 1024
 #define MILLISECONDS_PER_FRAME	30
 /******************************************************************************/
-#define SCREEN_TILE_WIDTH		15
-#define SCREEN_TILE_HEIGHT		12
+#define SCREEN_TILE_WIDTH		20
+#define SCREEN_TILE_HEIGHT		16
 #define SCREEN_MAX_SPRITES		200
 /******************************************************************************/
-#define TILE_WIDTH (32.0f / SCREEN_WIDTH )
-#define TILE_HEIGHT (32.0f / SCREEN_HEIGHT)
+#define TILE_WIDTH (2.0F / SCREEN_TILE_WIDTH )
+#define TILE_HEIGHT (2.0F / SCREEN_TILE_HEIGHT)
 
 /** The typedefined enumeration bringing booleans to C */
 typedef enum bool{
@@ -42,7 +43,7 @@ typedef enum bool{
 #define MAX_MAP_WIDTH				256
 /******************************************************************************/
 /******************************************************************************/
-#define MAX_VERTICES ((SCREEN_TILE_WIDTH + 1)*(SCREEN_TILE_HEIGHT + 1) + SCREEN_MAX_SPRITES)
+#define MAX_VERTICES MAX_MAP_HEIGHT*16
 #define MAX_BILLBOARDS (SCREEN_TILE_WIDTH * SCREEN_TILE_HEIGHT + SCREEN_MAX_SPRITES)
 #define MAX_INDICES (4 * MAX_BILLBOARDS)
 /******************************************************************************/

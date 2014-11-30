@@ -20,6 +20,9 @@ Map_T *NewMap()
 void RemoveFromTile(Entity_T *ent)
 {
 	Entity_T *e;
+	if(ent->onTile == NULL)
+		return;
+
 	if(ent->onTile->entities == ent)
 	{
 		ent->onTile->entities = ent->next;
@@ -48,12 +51,23 @@ void AddToTile(Entity_T *ent, Tile_T *t)
 	ent->onTile = t;
 }
 
-void GetTileUVs(Map_T *map, short tnum, Vec2f *ul, Vec2f *lr)
+void GetTileUVs(Map_T *map, short tnum, Vec2f *ll, Vec2f *ur)
 {
 	Sprite_T *s = map->tilesheet;
 	Rect r = s->frames[tnum-1];
-	ul->x = r.x;
-	ul->y = r.y;
-	lr->x = r.x + r.w;
-	lr->y = r.y + r.w;
+	ll->x = r.x;
+	ll->y = r.y;
+	ur->x = r.x + r.w;
+	ur->y = r.y + r.w;
+}
+
+Tile_T *TileAtPos(Map_T *map, Vec2f pos)
+{
+	Vec2i t;
+	t.x = 128 + (int)(pos.x * SCREEN_TILE_WIDTH)/2;
+	t.y = 128 + (int)(pos.y * SCREEN_TILE_HEIGHT)/2; 
+	if(map->tiles[t.x][t.y].num == 0)
+		return NULL;
+	else
+		return &map->tiles[t.x][t.y];
 }
