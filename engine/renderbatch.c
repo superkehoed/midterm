@@ -17,11 +17,11 @@ void BatchScreenEntities(RenderBatch_T *batch, Map_T *map, Vec2f center)
 	Entity_T *e;
 	Vec2f UV_ll, UV_ur, size;
 	int x, y, tx, ty, vertex, index;
-	GLuint shadow;
+	//GLuint shadow;
 
 	vertex = batch->num_vertices;
 	index = batch->num_indices;
-	shadow = glGetUniformLocation(game->shader->id, "entlight");
+	//shadow = glGetUniformLocation(game->shader->id, "entlight");
 	for(y = -2;y < SCREEN_TILE_HEIGHT + 2;y++)
 	{
 		ty = (int)(center.y - tile_height_offset + y);
@@ -40,7 +40,7 @@ void BatchScreenEntities(RenderBatch_T *batch, Map_T *map, Vec2f center)
 				batch->textures[batch->num_textures++] = e->sprite->texId;
 				GetEntityUVs(e, &UV_ll, &UV_ur);
 				GetEntitySize(e, &size);
-				glProgramUniform1f(game->shader->id, shadow, 1.0f);
+//				glProgramUniform1f(game->shader->id, shadow, 1.0f);
 				//LL
 				batch->vertices[vertex].x = -1.0f - TILE_WIDTH/2  + x * TILE_WIDTH + e->pos.x;
 				batch->vertices[vertex].y = 1.0f - TILE_HEIGHT/2 - y * TILE_HEIGHT + e->pos.y;
@@ -141,9 +141,9 @@ void BatchScreenMap(RenderBatch_T *batch, Map_T *map, Vec2f center)
 void DrawBatch(RenderBatch_T *batch, Shader_T *s)
 {
 	GLuint texloc;
-	GLint shadow;
+	//GLint shadow;
 	int i;
-	GLuint entlight;
+	//GLuint entlight;
 	if(batch->num_vertices == 0)
 		return;
 	glUseProgram(s->id);
@@ -151,7 +151,7 @@ void DrawBatch(RenderBatch_T *batch, Shader_T *s)
 	shadow = glGetUniformLocation(s->id, "shadow");
 	entlight = glGetAttribLocation(game->shader->id, "entlight");
 	glProgramUniform1i(s->id, texloc, 0);
-	glProgramUniform1f(s->id, shadow, game->darkness);
+	//glProgramUniform1f(s->id, shadow, game->darkness);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, batch->textures[0]);
 	glEnableVertexAttribArray( game->shader->uv_attrib );

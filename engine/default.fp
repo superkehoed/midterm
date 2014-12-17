@@ -1,4 +1,4 @@
-#version 330
+#version 410
  
 // Interpolated values from the vertex shaders
 layout(location = 0)in vec2 UV;

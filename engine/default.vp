@@ -1,4 +1,4 @@
-#version 330
+#version 410
  
 // Input vertex data, different for all executions of this shader.
 in vec2 vertexUV;
@@ -8,6 +8,7 @@ uniform float transparency;
 layout(location = 0)out vec2 UV;
 layout(location = 1)out float entlight;
 
+uniform float shadow;
 uniform float innerlight;
 void main(){
  

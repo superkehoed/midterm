@@ -635,6 +635,7 @@ GLuint LoadTex(const char *name)
 	}
 	return texture;
 }
+/******************************************************************************/
 /** Turns an SDL surface into an OpenGL Texture
  * @param surface The surface to be converted
  * @return A GLuint representing the new texture

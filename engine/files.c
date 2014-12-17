@@ -90,12 +90,12 @@ Map_T *StartMap()
 	s.x = 3;
 	s.y = 3;
 	*/
-	for(x = 0;x < 100;x++)
-		for(y = 0;y < 100;y++)
+	for(x = 0;x < 200;x++)
+		for(y = 0;y < 200;y++)
 			map->tiles[x][y].num = 55;
 	e = SetupMonster(0);
-	map->start.x = 25;
-	map->start.y = 25;
+	map->start.x = 0;
+	map->start.y = 0;
 	p.x = 30;
 	p.y = 30;
 	MoveEntity(e, map, p);

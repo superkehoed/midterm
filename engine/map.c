@@ -64,9 +64,9 @@ void GetTileUVs(Map_T *map, short tnum, Vec2f *ll, Vec2f *ur)
 Tile_T *TileAtPos(Map_T *map, Vec2f pos)
 {
 	Vec2i t;
-	t.x = 128 + (int)(pos.x * SCREEN_TILE_WIDTH)/2;
-	t.y = 128 + (int)(pos.y * SCREEN_TILE_HEIGHT)/2; 
-	if(map->tiles[t.x][t.y].num == 0)
+	t.x = (int)(pos.x * SCREEN_TILE_WIDTH)/2;
+	t.y = (int)(pos.y * SCREEN_TILE_HEIGHT)/2; 
+	if(t.x < 0 || t.y < 0 || map->tiles[t.x][t.y].num == 0)
 		return NULL;
 	else
 		return &map->tiles[t.x][t.y];
