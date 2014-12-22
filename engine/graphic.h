@@ -1,6 +1,7 @@
 #ifndef __GRAPHIC_H
 #define __GRAPHIC_H
 
+//Graphic types
 #define GRAPHICTYPE_SPLASH	1
 #define GRAPHICTYPE_WINDOW	2
 #define GRAPHICTYPE_ELEMENT	3
@@ -15,16 +16,18 @@
 #define GRAPHFLAG_FULLSCREEN	0x80
 
 #define GRAPHFLAG_FADE	GRAPHFLAG_FADE_IN|GRAPHFLAG_FADE_OUT
-
+/**
+ * Structure for the information about graphics
+ */
 typedef struct Graphic_T{
-	int type;
-	long flags;
-	GLuint startTime;
-	GLuint endTime;
+	int type;	/**< The type of graphic */
+	long flags; /**< The graphics flags set on the graphic */
+	GLuint startTime; /**< The start time of the graphic */
+	GLuint endTime; /**< The end time of the graphic */
 }Graphic_T;
 
 
 void SetupGraphic(struct Entity_T *ent, struct Sprite_T *sprite, short type, GLuint timer, long flags);
 void DrawGraphic(struct Entity_T *graphic);
-
+void DrawHUD();
 #endif //__GRAPHIC_H

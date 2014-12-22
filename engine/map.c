@@ -1,7 +1,3 @@
-#include <GL/glew.h>
-#include <SDL.h>
-#include <SDL_opengl.h>
-#include <GL/GLU.h>
 #include "include.h"
 
 Map_T *NewMap()
@@ -13,42 +9,70 @@ Map_T *NewMap()
 		map = gUnusedMapList;
 		gUnusedMapList = gUnusedMapList->next;
 	}
+	memset(map, 0, sizeof(Map_T));
 	memset(map->tiles, 0, sizeof(Tile_T)*MAX_MAP_WIDTH*MAX_MAP_HEIGHT);
 	return map;
 }
 
-void RemoveFromTile(Entity_T *ent)
+void RemoveFromMap(Entity_T *ent)
 {
 	Entity_T *e;
-	if(ent->onTile == NULL)
+	
+	if(ent->onMap == NULL)
 		return;
-
-	if(ent->onTile->entities == ent)
+	if(ent->onMap->entities == ent)
 	{
-		ent->onTile->entities = ent->next;
+		ent->onMap->entities = ent->next;
 	}
 	else
 	{
-		for(e = ent->onTile->entities;e != NULL;e = e->next)
+		for(e = ent->onMap->entities;e != NULL;e = e->next)
 			if(e->next == ent)
 				break;
 		if(e != NULL)
 			e->next = ent->next;
 		else{
-			//Error - Entity not on tile
+			//Error - Entity not on map
 			return;
 		}
 	}
+	if(ent->light != NULL){
+		if(ent->onMap->lights == ent)
+		{
+			ent->onMap->lights = ent->nextLight;
+		}
+		else
+		{
+			for(e = ent->onMap->lights;e != NULL;e = e->nextLight)
+				if(e->nextLight == ent)
+					break;
+			if(e != NULL)
+				e->nextLight = ent->nextLight;
+			else{
+				//Error - Entity not on map
+				return;
+			}
+		}
+	}
+	cpSpaceRemoveShape(ent->onMap->space, ent->shape);
 	ent->next = NULL;
-	ent->onTile = NULL;
+	ent->nextLight = NULL;
+	ent->onMap = NULL;
 	return;
 }
 
-void AddToTile(Entity_T *ent, Tile_T *t)
+void AddToMap(Entity_T *ent, Map_T *map)
 {
-	ent->next = t->entities;
-	t->entities = ent;
-	ent->onTile = t;
+	if(ent->onMap != NULL)
+		RemoveFromMap(ent);
+	ent->next = map->entities;
+	map->entities = ent;
+	if(ent->light != NULL){
+		ent->nextLight = map->lights;
+		map->lights = ent;
+	}
+	ent->onMap = map;
+	cpSpaceAddShape(ent->onMap->space, ent->shape);
 }
 
 void GetTileUVs(Map_T *map, short tnum, Vec2f *ll, Vec2f *ur)
@@ -64,10 +88,18 @@ void GetTileUVs(Map_T *map, short tnum, Vec2f *ll, Vec2f *ur)
 Tile_T *TileAtPos(Map_T *map, Vec2f pos)
 {
 	Vec2i t;
-	t.x = (int)(pos.x * SCREEN_TILE_WIDTH)/2;
-	t.y = (int)(pos.y * SCREEN_TILE_HEIGHT)/2; 
+	t.x = 128 + (int)(pos.x * SCREEN_TILE_WIDTH)/2;
+	t.y = 128 - (int)(pos.y * SCREEN_TILE_HEIGHT)/2; 
 	if(t.x < 0 || t.y < 0 || map->tiles[t.x][t.y].num == 0)
 		return NULL;
 	else
 		return &map->tiles[t.x][t.y];
+}
+
+Vec2f PosAtTile(Vec2f tile)
+{
+	Vec2f result;
+	result.x = 2 * (tile.x - 128)/SCREEN_TILE_WIDTH;
+	result.y = 2 * -(tile.y - 128)/SCREEN_TILE_HEIGHT;
+	return result;
 }

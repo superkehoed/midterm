@@ -1,24 +1,35 @@
-#include <GL/glew.h>
-#include <SDL.h>
-#include <SDL_opengl.h>
-#include <GL/GLU.h>
-#include <stdio.h>
+/******************************************************************************/
+/******************************************************************************/
 #include "include.h"
+#include <stdio.h>
 
+/******************************************************************************/
 //Globals
 Entity_T *gUnusedEntityList;
-
+/******************************************************************************/
+/**
+ * Frees the entity and adds it to the unused list
+ * @param ent The entity to be freed
+ */
 void FreeEntity(Entity_T *ent)
 {
 	ent->next = gUnusedEntityList;
 	gUnusedEntityList = ent;
 }
-
+/******************************************************************************/
+/**
+ * Initializes the entity with whatever steps are necessary
+ * @param ent The entity to be initialized
+ */
 void InitializeEntity(Entity_T *ent)
 {
 	memset(ent, 0, sizeof(Entity_T));
 }
-
+/******************************************************************************/
+/**
+ * Retrieves an entity from the unused list or allocates one if the list is empty
+ * @return A new, initialized entity
+ */
 Entity_T *NewEntity()
 {
 	Entity_T *ent;
@@ -30,9 +41,16 @@ Entity_T *NewEntity()
 	}
 	//Initialize it before sending it out
 	InitializeEntity(ent);
+	ent->next = NULL;
+	ent->nextLight = NULL;
+
 	return ent;
 }
-
+/******************************************************************************/
+/**
+ * Draws an entity on the screen
+ * @param ent The entity to be drawn
+ */
 void DrawEntity(Entity_T *ent)
 {
 	if(ent->sprite == NULL)
@@ -51,7 +69,13 @@ void DrawEntity(Entity_T *ent)
 		break;
 	}
 }
-
+/******************************************************************************/
+/**
+ * Instantly moves an entity to a specific position on a map
+ * @param ent The entity to be moved
+ * @param map The map to move the entity on
+ * @param pos The map position to move the entity to
+ */
 void MoveEntity(Entity_T *ent, Map_T *map, Vec2f pos)
 {
 	const GLfloat map_width_limit = MAX_MAP_WIDTH / 2 * TILE_WIDTH;
@@ -66,18 +90,23 @@ void MoveEntity(Entity_T *ent, Map_T *map, Vec2f pos)
 	if((tile = TileAtPos(map, pos)) == NULL)
 	{
 		//Error - Moving to nonexistent tile
+		return;
 	}
 	else if(IS_SET(tile->flags, TILEFLAG_NO_PASS))
 	{
 		//Error - Moving to nopass tile
+		return;
 	}
-	if(ent->onMap != map){
-		ent->next = map->entities;
-		map->entities = ent;
-		ent->onMap = map;
-	}
+	ent->body->p.x = pos.x;
+	ent->body->p.y = pos.y;
+	if(ent->onMap != map)
+		AddToMap(ent, map);
 }
-
+/******************************************************************************/
+/**
+ * Creates and sets up the hero entity
+ * @return The hero entity created
+ */
 Entity_T *SetupHero()
 {
 	int i, x;
@@ -89,8 +118,11 @@ Entity_T *SetupHero()
 	e->currentAnimation = 0;
 	e->currentFrame = 0;
 	e->sprite = NewSprite();
+	e->body = cpBodyNew(1.0f, 1.0f);
 	e->size.x = TILE_WIDTH;
 	e->size.y = 1.5f * TILE_HEIGHT;
+	e->shape = cpBoxShapeNew(e->body, e->size.x, e->size.y);
+	
 
 	for(i = 0;i < 20;i++)
 	{
@@ -117,17 +149,35 @@ Entity_T *SetupHero()
 		animations[x].flags = ANIMFLAG_NONE;
 	}
 	SetupSprite(e->sprite, "hero.png", frames, 20, animations, 8);
+	//Set up the hero's inner light
+	e->light = NewLight();
+	e->light->brightness = 0.8f;
+	e->light->color.x = 1.0f;
+	e->light->color.y = .95f;
+	e->light->color.z = 0.5f;
+	e->light->span = TILE_WIDTH / 2;
+	e->light->offset.x = TILE_WIDTH / 2;
+	e->light->offset.y = 0;
+	SET_FLAG(e->flags, ENTFLAG_LIGHT);
+	e->next = NULL;
 	return e;
 }
-
+/******************************************************************************/
 void DefaultState(Entity_T *e)
 {
+	GLint anim;
 	//TODO: Handle death if they need to linger here
 	e->state = ENTSTATE_STAND;
 	//TODO: Hackish, resolve later.
-	StartAnimation(e, e->dir + ANIM_STAND_DOWN);
+	switch(e->dir){
+	case ENTDIR_UP: anim = ANIM_STAND_UP; break;
+	case ENTDIR_DOWN: anim = ANIM_STAND_DOWN; break;
+	case ENTDIR_LEFT: anim = ANIM_STAND_LEFT; break;
+	case ENTDIR_RIGHT: anim = ANIM_STAND_RIGHT; break;
+	}
+	StartAnimation(e, anim);
 }
-
+/******************************************************************************/
 void UpdateAnimation(Entity_T *e)
 {
 	if(++e->currentFrame >= e->sprite->animations[e->currentAnimation].numFrames){
@@ -141,7 +191,7 @@ void UpdateAnimation(Entity_T *e)
 	e->nextFrame = game->currentTime 
 		+ e->sprite->animations[e->currentAnimation].frameLengths[e->currentFrame];
 }
-
+/******************************************************************************/
 int CheckCollisions(Entity_T *e)
 {
 	//Check to see if the entity has arrived at a blocking tile
@@ -149,7 +199,7 @@ int CheckCollisions(Entity_T *e)
 		//Check to see if the entity is considered Damaging or Nopass.
 	return 0;
 }
-
+/******************************************************************************/
 /**
  * Attempts to have the pusher push e in a direction if possible
  */
@@ -164,12 +214,12 @@ bool PushEntity(Entity_T *e, Entity_T *pusher, GLuint dir)
 			return false;
 		else{
 			WalkEntity(e, dir);
-			e->velocity = pusher->velocity;
+			e->body->v = pusher->body->v;
 			return true;
 		}
 	}
 }
-
+/******************************************************************************/
 /**
  * Updates the entity and returns false if the entity is destroyed
  */
@@ -178,28 +228,9 @@ bool UpdateEntity(Entity_T *e, GLuint delta)
 	Vec3f pos = e->pos;
 	if(e->Think != NULL && e->nextThink <= game->currentTime)
 		(e->Think)(e, delta);
-	if(e->velocity.x != 0)
-		e->pos.x += (e->velocity.x * delta / 1000);
-	if(e->velocity.y != 0)
-		e->pos.y += (e->velocity.y * delta / 1000);
-	if(e->velocity.z != 0)
-		e->pos.z += (e->velocity.z * delta / 1000);	
+	e->pos.x = (GLfloat)e->body->p.x;
+	e->pos.y = (GLfloat)e->body->p.y;
 
-	//If they collided with anything, return them to their previous position and reset their velocity
-	if(CheckCollisions(e) != 0){
-		e->pos = pos;
-		e->velocity.x = 0;
-		e->velocity.y = 0;
-		e->velocity.z = 0;
-	}
-	if(e->state == ENTSTATE_WALK)
-	{
-		e->pos.x = 0;
-		e->pos.y = 0;
-		e->velocity.x = 0;
-		e->velocity.y = 0;
-		DefaultState(e);
-	}
 	//Update their animation after
 	if(e->nextFrame <= game->currentTime)
 	{
@@ -207,21 +238,25 @@ bool UpdateEntity(Entity_T *e, GLuint delta)
 	}
 	return true;
 }
-
+/******************************************************************************/
 
 void GetEntitySize(Entity_T *e, Vec2f *size)
 {
-	//TODO: Add code to handle size effects here
-	size->x = e->size.x;
-	size->y = e->size.y;
+	GLfloat scale = 1.0f;
+	if(IS_SET(e->flags, ENTFLAG_BOSS))
+		scale *= 3.0f;
+	//Handle size effects here
+	size->x = e->size.x * scale;
+	size->y = e->size.y * scale;
+	
 }
-
+/******************************************************************************/
 void GetEntityUVs(Entity_T *e, Vec2f *ll, Vec2f *ur)
 {
 	GetSpriteUVs(e->sprite, 
 		e->sprite->animations[e->currentAnimation].frames[e->currentFrame], ll, ur);
 }
-
+/******************************************************************************/
 void StartAnimation(Entity_T *e, GLuint anim)
 {
 	if(anim >= e->sprite->numAnimations
@@ -233,46 +268,46 @@ void StartAnimation(Entity_T *e, GLuint anim)
 	e->currentFrame = 0;
 	e->nextFrame = game->currentTime + e->sprite->animations[anim].frameLengths[0];
 }
-
+/******************************************************************************/
 void WalkEntity(Entity_T *e, int direction)
 {
 	const float WALK_SPEED = TILE_WIDTH;
 	switch(direction){
 	case ENTDIR_UP:
-		e->velocity.y = WALK_SPEED;
+		e->body->v.y = WALK_SPEED;
 		if(e->state != ENTSTATE_WALK || e->dir == ENTDIR_DOWN)
 			StartAnimation(e, ANIM_WALK_UP);
 		break;
 	case ENTDIR_DOWN:
-		e->velocity.y = -WALK_SPEED;
+		e->body->v.y = -WALK_SPEED;
 		if(e->state != ENTSTATE_WALK || e->dir == ENTDIR_UP)
 			StartAnimation(e, ANIM_WALK_DOWN);
 		break;
 	case ENTDIR_LEFT:
-		e->velocity.x = -WALK_SPEED;
+		e->body->v.x = -WALK_SPEED;
 		if(e->state != ENTSTATE_WALK || e->dir == ENTDIR_RIGHT)
 			StartAnimation(e, ANIM_WALK_LEFT);
 		break;
 	case ENTDIR_RIGHT:
-		e->velocity.x = WALK_SPEED;
-		if(e->state == ENTSTATE_WALK || e->dir == ENTDIR_LEFT)
+		e->body->v.x = WALK_SPEED;
+		if(e->state != ENTSTATE_WALK || e->dir == ENTDIR_LEFT)
 			StartAnimation(e, ANIM_WALK_RIGHT);
 		break;
 	}
 	e->dir = direction;
 	e->state = ENTSTATE_WALK;
 }
-
+/******************************************************************************/
 
 void MonsterHunt(Entity_T *e, GLuint delta)
 {
 	bool frozen = false;
 	Vec2f offset;
 	Vec2i dv[4] = {
-		{ 0, -1},
+		{ 0, 1},
 		{ -1, 0},
 		{ 1, 0},
-		{ 0, 1}
+		{ 0, -1}
 	};
 	GLuint dirs[4];
 	GLuint max_dirs = 0;
@@ -315,7 +350,7 @@ void MonsterHunt(Entity_T *e, GLuint delta)
 		}
 	}
 
-	if(!frozen){
+	if(!frozen && max_dirs > 0){
 		num = Random(max_dirs);
 		//Weighted randoms
 		for(i = 0;i < 4;i++)
@@ -331,7 +366,7 @@ void MonsterHunt(Entity_T *e, GLuint delta)
 	}
 	e->nextThink = game->currentTime + Random(1000) + 500;
 }
-
+/******************************************************************************/
 Entity_T *SetupMonster(int monster)
 {
 	int i, x;
@@ -343,9 +378,11 @@ Entity_T *SetupMonster(int monster)
 	e->currentAnimation = 0;
 	e->currentFrame = 0;
 	e->sprite = NewSprite();
-	e->size.x = TILE_WIDTH;
-	e->size.y = 1.5f * TILE_HEIGHT;
-
+	e->body = cpBodyNew(1.0f, 1.0f);
+	e->size.x = 3* TILE_WIDTH;
+	e->size.y = 3 * 1.5f * TILE_HEIGHT;
+	e->shape = cpBoxShapeNew(e->body, e->size.x, e->size.y);
+	
 	for(i = 0;i < 20;i++)
 	{
 		frames[i].x = (i % 4) * SPRITE_WIDTH;
@@ -381,3 +418,7 @@ Entity_T *SetupMonster(int monster)
 	}
 	return e;
 }
+/******************************************************************************/
+/******************************************************************************/
+/******************************************************************************/
+/******************************************************************************/

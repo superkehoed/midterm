@@ -2,18 +2,28 @@
  
 // Input vertex data, different for all executions of this shader.
 in vec2 vertexUV;
-in vec2 vertexPosition;
+in vec3 vertexPosition;
 uniform float transparency;
+uniform int numlights;
+uniform float lightstrengths[20];
+uniform vec3 lightpositions[20];
+uniform float lightspans[20];
+uniform vec3 lightcolors[20];
 // Output data ; will be interpolated for each fragment.
-layout(location = 0)out vec2 UV;
-layout(location = 1)out float entlight;
+out vec2 UV;
+out float lightamts[20];
 
-uniform float shadow;
-uniform float innerlight;
 void main(){
- 
+	//Go through each light and calculate its impact on this vertex
+	//Go through each light and figure out how much of the intensity it contributes
+	for(int i = 0;i < numlights;i++){
+			lightamts[i]=max(0, lightstrengths[i] * exp(-distance(vec3(vertexPosition.xy, 0), lightpositions[i])/lightspans[i]));
+			//Give a solid bar of light at the center
+			//if(lightamts[i] >= lightstrengths[i] * .75)
+				//lightamts[i] = lightstrengths[i];
+	}
     // Output position of the vertex, in clip space : MVP * position
-    gl_Position =  vec4(vertexPosition,0,1);
+    gl_Position =  vec4(vertexPosition,1);
     // UV of the vertex. No special space for this one.
     UV = vertexUV;
 }

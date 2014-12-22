@@ -4,14 +4,11 @@
  * @author Ulysee Thompson
  */
 /******************************************************************************/
-#include <GL/glew.h>
-#include <SDL.h>
-#include <SDL_opengl.h>
+#include "include.h"
 #include <SDL_image.h>
-#include <GL/GLU.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "include.h"
+
 /******************************************************************************/
 //Globals
 /** Global pointer for tracking the current game engine */
@@ -41,6 +38,7 @@ bool Startup()
 	game->foreGraphicsTail = NULL;
 	game->backGraphicsHead = NULL;
 	game->backGraphicsTail = NULL;
+	game->heart = NULL;
 	game->map = NULL;
 	game->selection = 0;
 	game->done = false;
@@ -48,7 +46,7 @@ bool Startup()
 	game->mapBatch.num_indices = 0;
 	game->entBatch.num_vertices = 0;
 	game->entBatch.num_indices = 0;
-	game->darkness = .9f;
+	game->darkness = TOTAL_DARKNESS;
 	//Reserve the memory necessary for entities and set up the unused entity list
 	ent = (Entity_T *)malloc(sizeof(Entity_T)*STARTING_NUM_ENTITIES);
 	for(i = 0;i < STARTING_NUM_ENTITIES;i++){
@@ -61,6 +59,7 @@ bool Startup()
 		FreeSprite(s);
 		s++;
 	}
+
 	//Initialize SDL
 	if( SDL_Init( SDL_INIT_EVERYTHING ) < 0 )
 	{
@@ -125,8 +124,10 @@ bool Startup()
  */
 void Poll()
 {
+	short inputs[KEY_MAX];
 	SDL_Event e;
 	Vec2f pos;
+	unsigned int key;
 	//Poll for any inputs by the player at this time
 	switch(game->state){
 	case GAMESTATE_INTRO: 
@@ -160,58 +161,16 @@ void Poll()
 			pos.x = game->hero->pos.x;
 			pos.y = game->hero->pos.y;
 		}
-		//TODO: Midterm - See list below
 		//Poll for events over and over
-		while(SDL_PollEvent(&e)){
-			if(e.type == SDL_KEYDOWN){
-				switch(e.key.keysym.sym){
-				case SDLK_UP:
-					WalkEntity(game->hero, ENTDIR_UP);
-					break;
-				case SDLK_DOWN:
-					WalkEntity(game->hero, ENTDIR_DOWN);
-					break;
-				case SDLK_LEFT:
-					WalkEntity(game->hero, ENTDIR_LEFT);
-					break;
-				case SDLK_RIGHT:
-					WalkEntity(game->hero, ENTDIR_RIGHT);
-					break;
-				case SDLK_ESCAPE:
-					game->done = true;
-					break;
-				case SDLK_q:
-					game->darkness+=.01f;
-					break;
-				case SDLK_w:
-					game->darkness-=.01f;
-					break;
-				case SDLK_t:
-					pos.y-=TILE_HEIGHT;
-					MoveEntity(game->hero, game->map, pos);
-					break;
-				case SDLK_g:
-					pos.y+=TILE_HEIGHT;
-					MoveEntity(game->hero, game->map, pos);
-					break;
-				case SDLK_f:
-					pos.x-=TILE_WIDTH;
-					MoveEntity(game->hero, game->map, pos);
-					break;
-				case SDLK_h:
-					pos.x+=TILE_WIDTH;
-					MoveEntity(game->hero, game->map, pos);
-					break;
-				}
-			}
-			if(e.type == SDL_QUIT){
-				game->done = true;
-			}
-		}	
-		//If pressing ctrl, set attack bit
-		//If pressing alt, set secondary bit
-		//If pressing space, set use bit
-		//If pressing escape, bring up menu
+		SDL_PumpEvents();
+		game->inputs = SDL_GetKeyboardState(NULL);
+		if(game->inputs[SDL_SCANCODE_ESCAPE]){
+			game->done = true;
+		}
+		if(game->inputs[SDL_SCANCODE_Q])
+			game->darkness+=.01f;
+		if(game->inputs[SDL_SCANCODE_W])
+			game->darkness-=.01f;
 		break;
 	case GAMESTATE_CREDITS:
 		while(SDL_PollEvent(&e)){
@@ -233,11 +192,9 @@ void Poll()
  */
 void Update()
 {
-	Map_T *map;
 	Entity_T *e, *e_next;
 	Sprite_T *s;
 	Rect r;
-	GLuint x, y;
 	Animation_T a;
 	GLuint delta = game->currentTime - game->lastUpdate;
 	r.x = 0;
@@ -245,16 +202,10 @@ void Update()
 	r.w = SCREEN_WIDTH;
 	r.h = SCREEN_HEIGHT;
 	memset(&a, 0, sizeof(a));
+	if(SetupState())
+		return;
 	switch(game->state){
 	case GAMESTATE_INTRO:
-		if(IS_SET(game->flags, GAMEFLAG_SETUP_STATE)){
-			e = NewEntity();
-			s = NewSprite();
-			SetupSprite(s, "splash.png", &r, 1, &a, 1); 
-			SetupGraphic(e, s, GRAPHICTYPE_SPLASH, 1000, GRAPHFLAG_FADE|GRAPHFLAG_FULLSCREEN);
-			AddSplashScreen(e);
-			REMOVE_FLAG(game->flags, GAMEFLAG_SETUP_STATE);
-		}
 		UpdateForeGraphics();
 		if(game->foreGraphicsHead == NULL){
 			game->state = GAMESTATE_MAIN_MENU;
@@ -262,28 +213,6 @@ void Update()
 		}
 		break;
 	case GAMESTATE_MAIN_MENU:
-		if(IS_SET(game->flags, GAMEFLAG_SETUP_STATE)){
-			//TODO: Encapsulate this behavior later into a formal menu system
-			e = NewEntity();
-			s = NewSprite();
-			SetupSprite(s, "main_menu.png", &r, 1, &a, 1);
-			SetupGraphic(e, s, GRAPHICTYPE_SPLASH, 0, GRAPHFLAG_FADE_IN|GRAPHFLAG_FULLSCREEN);
-			AddSplashScreen(e);
-			e = NewEntity();
-			s = NewSprite();
-			SetupSprite(s, "cursor.png", &r, 1, &a, 1);
-			s->frames[0].w = 1;
-			s->frames[0].h = 1;
-			SetupGraphic(e, s, GRAPHICTYPE_ELEMENT, 0, GRAPHFLAG_FADE_IN);
-			e->pos.x = -.55f;
-			e->pos.y = -.30f;
-			e->pos.z = 0.0f;
-			e->size.x = .1f;
-			e->size.y = .1f;
-			game->foreGraphicsTail->next = e;
-			game->foreGraphicsTail = e;
-			REMOVE_FLAG(game->flags, GAMEFLAG_SETUP_STATE);
-		}
 		//Handle if they have selected something
 		if(IS_SET(game->flags, GAMEFLAG_SELECTING)){
 			REMOVE_FLAG(game->flags, GAMEFLAG_SELECTING);
@@ -302,38 +231,22 @@ void Update()
 		}
 		break;
 	case GAMESTATE_PLAYING:
-		//TODO: Midterm - See list below
-		if(IS_SET(game->flags, GAMEFLAG_SETUP_STATE))
-		{
-			//Set up the hero
-			game->hero = SetupHero();
-			map = StartMap();
-			game->map = map;
-			MoveEntity(game->hero, map, map->start);
-			REMOVE_FLAG(game->flags, GAMEFLAG_SETUP_STATE);
+		//Interpret their input
+		InterpretInput();
+		//Run the physics tests
+		UpdatePhysics(delta);
+		//Go through the current map and update all entities
+		for(e = game->map->entities; e; e = e_next){
+			e_next = e->next;
+			UpdateEntity(e, delta);
 		}
-		for(x = 0;x < MAX_MAP_WIDTH;x++)
-			for(y = 0;y < MAX_MAP_HEIGHT;y++)
-				for(e = game->map->tiles[x][y].entities; e; e = e_next){
-					e_next = e->next;
-					UpdateEntity(e, delta);
-				}
-		//Check to see if the player is done walking
-		//Check to see if the player is done attacking
-		//Update any mobs that are on the map
 		//Update any world events that are pending
 		break;
 	case GAMESTATE_GAME_MENU:
-		//TODO: Midterm - See list below
-		//SETUP
-		//Load the main menu, static image for now
-		//Load the selector and position it over point 1
-		//STANDARD BEHAVIOR
-		//Handle if player has selected something
-		//If the player is mid-selection, freeze input until animation done
+		//Handled in update
 		break;
 	case GAMESTATE_CREDITS:
-		//TODO: Midterm - See list below
+		//Midterm - See list below
 		//Fade in a credits page
 		if(IS_SET(game->flags, GAMEFLAG_SETUP_STATE))
 		{
@@ -355,7 +268,7 @@ void Update()
 		break;
 	default: printf("Update(): No state set!\n"); break;
 	}
-	//Go through the current map and update all entities
+	
 }
 /******************************************************************************/
 /** The drawing method for the engine
@@ -373,14 +286,14 @@ void Draw()
 
 	switch(game->state){
 	case GAMESTATE_INTRO:
-		glClear( GL_COLOR_BUFFER_BIT );
+		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 		glUseProgram( game->shader->id );
 		DrawGraphic(game->foreGraphicsHead);
 		glUseProgram( (GLuint)NULL );
 		swap = true;
 		break;
 	case GAMESTATE_MAIN_MENU:
-		glClear( GL_COLOR_BUFFER_BIT );
+		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 		glUseProgram( game->shader->id );
 		for(e = game->foreGraphicsHead;e != NULL;e = e->next)
 			DrawGraphic(e);
@@ -388,34 +301,34 @@ void Draw()
 		swap = true;
 		break;
 	case GAMESTATE_PLAYING:
-		//TODO: Midterm - See list below
 		//Draw the current map
-		glClear( GL_COLOR_BUFFER_BIT );
+		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 		if(game->map != NULL){
 			ResetBatch(&game->mapBatch);
 			offset.x = game->hero->pos.x;
 			offset.y = game->hero->pos.y;
+			SET_FLAG(game->mapBatch.flags, BATCHFLAG_LIGHTING);
 			BatchScreenMap(&game->mapBatch, game->map, Vec3fToVec2f(game->hero->pos));
 			DrawBatch(&game->mapBatch, game->shader);
 			ResetBatch(&game->entBatch);
 			BatchScreenEntities(&game->entBatch, game->map, Vec3fToVec2f(game->hero->pos));
 			DrawBatch(&game->entBatch, game->shader);
 		}
-		
+		glUseProgram(game->shader->id);
+		DrawHUD();
+		glUseProgram((GLuint)NULL);
 		swap = true;
-		//Set up the VBO, UVs and VIO
 		//Draw particle/light effects
 		//Draw the HUD
 		break;
 	case GAMESTATE_GAME_MENU:
-		//TODO: Midterm - See list below
+		//TODO:
 		//Draw the background
 		//Draw the item list
 		//List stats
 		//Draw the selector positioned at point n
 		break;
 	case GAMESTATE_CREDITS:
-		//TODO: Midterm - See list below
 		//Draw the credits
 		glClear( GL_COLOR_BUFFER_BIT );
 		glUseProgram( game->shader->id );
@@ -463,7 +376,7 @@ bool InitializeGL()
 	//Create VBO
 	glGenBuffers( 1, &shader->VBO );
 	glBindBuffer( GL_ARRAY_BUFFER, shader->VBO );
-	glBufferData( GL_ARRAY_BUFFER, 2 * 4 * sizeof(GLfloat), vertexData, GL_STATIC_DRAW );
+	glBufferData( GL_ARRAY_BUFFER, 3 * 4 * sizeof(GLfloat), vertexData, GL_STATIC_DRAW );
 
 	//Create IBO
 	glGenBuffers( 1, &shader->IBO );
@@ -472,7 +385,7 @@ bool InitializeGL()
 	glGenBuffers(1, &shader->vertexBuffer);
 	glGenBuffers(1, &shader->textureBuffer);
 	glGenBuffers(1, &shader->indexBuffer);
-	glDisable(GL_DEPTH_TEST);
+	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
 	glBlendEquation(GL_FUNC_ADD);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -515,7 +428,13 @@ void Shutdown()
 	SDL_Quit();
 }
 /******************************************************************************/
-//Borrowed from Gribble Games -- Thanks guys!
+/**Borrowed from Gribble Games -- Thanks guys!
+ * Inverts an image to avoid issues with SDL and OpenGL interoperability
+ * @param pitch The Pitch of the image
+ * @param height The height of the image
+ * @param image_pixels A void pointer to an array holding the image pixels
+ * @return Either 0 (success) or -1 (Error)
+ */
 int invert_image(int pitch, int height, void* image_pixels)
 {
 	int index;
@@ -553,7 +472,10 @@ int invert_image(int pitch, int height, void* image_pixels)
 	return 0;
 }
 /******************************************************************************/
-//This is the function you want to call!
+/** Used to invert an sdl surface for OpenGL use
+  * @param image A pointer to the SDL_Surface to be inverted
+  * @return Either 0 (Success) or -1 (Error)
+  */
 int SDL_InvertSurface(SDL_Surface* image)
 {
 	if(NULL == image)
@@ -569,6 +491,8 @@ int SDL_InvertSurface(SDL_Surface* image)
  * Borrowed graciously from the Game Programming Wiki and improvised.
  * Loads a png file by name as an SDL surface, converts it to an OpenGL
  * Texture and then returns the texture ID.
+ * @param name The name of the file to be loaded
+ * @return The GLuint associated with the loaded texture
  */
 GLuint LoadTex(const char *name)
 {
@@ -683,6 +607,10 @@ GLuint SurfaceToTexture(SDL_Surface *surface)
 	return texture;
 }
 /******************************************************************************/
+/**
+  * Adds a splashscreen to the foregraphics list
+  * @param e The entity representing the splashscreen to be added
+  */
 void AddSplashScreen(Entity_T *e)
 {
 	//Add to the back of the linked list
@@ -694,11 +622,22 @@ void AddSplashScreen(Entity_T *e)
 		if(game->foreGraphicsTail == NULL){
 			//Generate an error, tail is missing
 		}else{
+			//Fix the timer on the splash screen
+			if(game->foreGraphicsTail->display.endTime > 0)
+			{
+				e->display.endTime = e->display.endTime - e->display.startTime + game->foreGraphicsTail->display.endTime;
+				e->display.startTime = game->foreGraphicsTail->display.endTime;
+			}
+			game->foreGraphicsTail->next = e;
 			game->foreGraphicsTail = e;
 		}
 	}
 }
 /******************************************************************************/
+/**
+  * Removes a splashscreen from the foregraphics list
+  * @param e The entity representing the splashscreen to be removed
+  */
 void RemoveSplashScreen(Entity_T *e)
 {
 	bool success = false;
@@ -720,6 +659,9 @@ void RemoveSplashScreen(Entity_T *e)
 	}
 }
 /******************************************************************************/
+/**
+  * Updates the foregraphics, removing anything with a lapsed time
+  */ 
 void UpdateForeGraphics()
 {
 	Entity_T *e, *NextEntity;
@@ -734,6 +676,9 @@ void UpdateForeGraphics()
 	}
 }
 /******************************************************************************/
+/**
+ * Updates the backgraphics, removing anything with a lapsed time
+ */
 void UpdateBackGraphics()
 {
 	Entity_T *e, *NextEntity;
@@ -750,6 +695,10 @@ void UpdateBackGraphics()
 	}
 }
 /******************************************************************************/
+/**
+  * Dequeues and potentially frees all entities in the foregraphics list
+  * @param free Boolean representing if dequeued entities should be freed
+  */
 void DequeueForeGraphics(bool free)
 {
 	Entity_T *e, *NextEntity;
@@ -764,6 +713,10 @@ void DequeueForeGraphics(bool free)
 
 }
 /******************************************************************************/
+/**
+  * Dequeues and potentially frees all entities in the bacgraphics list
+  * @param free Boolean representing if dequeued entities should be freed
+  */
 void DequeueBackGraphics(bool free)
 {
 	Entity_T *e, *NextEntity;
@@ -777,11 +730,21 @@ void DequeueBackGraphics(bool free)
 	game->backGraphicsHead = NULL;
 }
 /******************************************************************************/
+/**
+  * Returns a random value between 0 and num-1
+  * @param num The noninclusive maximum value of the range
+  * @return A random value between 0 and num-1
+  */
 GLuint Random(GLuint num)
 {
 	return rand() % num;
 }
 /******************************************************************************/
+/**
+  * Generates a Vec2f structure from a Vec3f by eliminating the z value
+  * @param vec The Vec3f structure to be converted
+  * @return A Vec2f structure containing the x and y values of vec
+  */
 Vec2f Vec3fToVec2f(Vec3f vec)
 {
 	Vec2f nvec;
@@ -789,4 +752,170 @@ Vec2f Vec3fToVec2f(Vec3f vec)
 	nvec.y = vec.y;
 	return nvec;
 }
+/******************************************************************************/
+/**
+  * Interprets the input during GAMESTATE_PLAYING
+  */
+void InterpretPlayInput()
+{
+	Vec2f vel = {0, 0};
+	if(game->inputs == NULL)
+		return;
+	//Deal with walking
+	if(game->inputs[SDL_SCANCODE_UP])
+		vel.y += 1;
+	if(game->inputs[SDL_SCANCODE_DOWN])
+		vel.y -= 1;
+	if(game->inputs[SDL_SCANCODE_LEFT])
+		vel.x -= 1;
+	if(game->inputs[SDL_SCANCODE_RIGHT])
+		vel.x += 1;
+	if(vel.y)
+		WalkEntity(game->hero, vel.y == 1 ? ENTDIR_UP : ENTDIR_DOWN);
+	if(vel.x)
+		WalkEntity(game->hero, vel.x == 1 ? ENTDIR_RIGHT : ENTDIR_LEFT);
+	if(game->hero->state == ENTSTATE_WALK
+	&& vel.x == 0 && vel.y == 0){
+		DefaultState(game->hero);
+		game->hero->body->v.x = 0;
+		game->hero->body->v.y = 0;
+	}
+}
+/******************************************************************************/
+/**
+  * Flow controller for interpreting input based upon the current game state
+  */
+void InterpretInput()
+{
+	switch(game->state){
+	case GAMESTATE_PLAYING:
+		InterpretPlayInput();
+		break;
+	default:
+		if(game->inputs[SDLK_ESCAPE])
+			game->done = true;
+		break;
+	}
+}
+/******************************************************************************/
+/**
+  * Converts SDLK values into the correct representative values based upon
+  * Those defined in inputs and the key_table
+  * @param SDLkey The SDLK value to be looked up
+  * @return The key value found or -1 if no key value is found
+  */
+int KeyLookup(Sint32 SDLkey)
+{
+	int key = -1;
+	int i;
+	for(i = 0;i < KEY_MAX;i++)
+		if(key_table[i].SDL_key == SDLkey){
+			key = key_table[i].key;
+			break;
+		}
+	return key;
+}
+/******************************************************************************/
+/**
+  * A table representing the key values within the game and their linked sdlk
+  * values.
+  */
+struct input_keys key_table[] = {
+	{SDLK_UP, KEY_UP},
+	{SDLK_DOWN, KEY_DOWN},
+	{SDLK_LEFT, KEY_LEFT},
+	{SDLK_RIGHT, KEY_RIGHT},
+	{SDLK_LCTRL, KEY_ATTACK},
+	{SDLK_SPACE, KEY_USE},
+	{SDLK_ESCAPE, KEY_ESCAPE},
+	{-1, 0}
+};
+/******************************************************************************/
+/**
+  * Creates the heart entity which will be used to represent the hero's current
+  * health.
+  * @return The entity representing the hearts used for health representation
+  */
+Entity_T *CreateHeart()
+{
+	Entity_T *health = NewEntity();
+	Sprite_T *s = NewSprite();
+	Rect r;
+	Animation_T a;
+	SetupSprite(s, "heart.png", &r, 1, &a, 1); 
+	SetupGraphic(health, s, GRAPHICTYPE_ELEMENT, -1, 0);
+	return health;
+}
+/******************************************************************************/
+/** Handles any setup for a new state and decides if updating should be interrupted
+  * @return A boolean signifying if interrupt should be interrupted
+  */
+bool SetupState()
+{
+	Entity_T *e;
+	Sprite_T *s;
+	Rect r;
+	Animation_T a;
+	Map_T *map;
+	bool interrupt = true;
+	if(!IS_SET(game->flags, GAMEFLAG_SETUP_STATE))
+		return false;
+	switch(game->state)
+	{
+	case GAMESTATE_INTRO:
+			e = NewEntity();
+			s = NewSprite();
+			SetupSprite(s, "splash.png", &r, 1, &a, 1); 
+			SetupGraphic(e, s, GRAPHICTYPE_SPLASH, 2000, GRAPHFLAG_FADE|GRAPHFLAG_FULLSCREEN);
+			AddSplashScreen(e);
+			e = NewEntity();
+			s = NewSprite();
+			SetupSprite(s, "chipmunk.png", &r, 1, &a, 1);
+			SetupGraphic(e, s, GRAPHICTYPE_SPLASH, 2000, GRAPHFLAG_FADE|GRAPHFLAG_FULLSCREEN);
+			AddSplashScreen(e);
+			interrupt = false;
+			break;
+	case GAMESTATE_MAIN_MENU:
+			//TODO: Encapsulate this behavior later into a formal menu system
+			e = NewEntity();
+			s = NewSprite();
+			SetupSprite(s, "main_menu.png", &r, 1, &a, 1);
+			SetupGraphic(e, s, GRAPHICTYPE_SPLASH, 0, GRAPHFLAG_FADE_IN|GRAPHFLAG_FULLSCREEN);
+			AddSplashScreen(e);
+			e = NewEntity();
+			s = NewSprite();
+			SetupSprite(s, "cursor.png", &r, 1, &a, 1);
+			s->frames[0].w = 1;
+			s->frames[0].h = 1;
+			SetupGraphic(e, s, GRAPHICTYPE_ELEMENT, 0, GRAPHFLAG_FADE_IN);
+			e->pos.x = -.55f;
+			e->pos.y = -.30f;
+			e->pos.z = 0.0f;
+			e->size.x = .1f;
+			e->size.y = .1f;
+			game->foreGraphicsTail->next = e;
+			game->foreGraphicsTail = e;
+			interrupt = false;
+			break;
+	case GAMESTATE_PLAYING:
+			//Set up the hero
+			game->hero = SetupHero();
+			game->heart = CreateHeart();
+			map = StartMap();
+			game->map = map;
+			MoveEntity(game->hero, map, PosAtTile(map->start));
+			REMOVE_FLAG(game->flags, GAMEFLAG_SETUP_STATE);
+			interrupt = false;
+			break;
+	}
+	REMOVE_FLAG(game->flags, GAMEFLAG_SETUP_STATE);
+	return interrupt;
+}
+/******************************************************************************/
+void UpdatePhysics(GLuint delta)
+{
+	cpSpaceStep(game->map->space, cpFloat(delta));
+}
+/******************************************************************************/
+/******************************************************************************/
 /******************************************************************************/

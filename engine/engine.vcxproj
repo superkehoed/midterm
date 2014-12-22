@@ -38,10 +38,10 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(SDL2)\include;$(GLEW)\include;$(SDL2IMAGE)\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(SDL2)\include;$(GLEW)\include;C:\Projects\Chipmunk-6.2.1\include;$(SDL2IMAGE)\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <LibraryPath>$(SDL2)\lib\x86;$(GLEW)\lib\Release\Win32;$(SDL2IMAGE)\lib\x86;$(LibraryPath)</LibraryPath>
+    <LibraryPath>C:\Projects\Chipmunk-6.2.1\msvc\vc10\chipmunk\Win32\Debug;$(SDL2)\lib\x86;$(GLEW)\lib\Release\Win32;$(SDL2IMAGE)\lib\x86;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IncludePath>$(SDL2)\include;$(GLEW)\include;$(SDL2IMAGE)\include;$(IncludePath)</IncludePath>
@@ -54,12 +54,12 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_MBCS;GLEW_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <CompileAs>CompileAsC</CompileAs>
+      <CompileAs>CompileAsCpp</CompileAs>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;glew32s.lib;SDL2.lib;SDL2main.lib;openGL32.lib;glu32.lib;sdl2_image.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;glew32s.lib;SDL2.lib;SDL2main.lib;openGL32.lib;glu32.lib;sdl2_image.lib;chipmunk.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SubSystem>Console</SubSystem>
     </Link>
   </ItemDefinitionGroup>
@@ -98,6 +98,7 @@
     <ClInclude Include="entity.h" />
     <ClInclude Include="graphic.h" />
     <ClInclude Include="include.h" />
+    <ClInclude Include="inputs.h" />
     <ClInclude Include="light.h" />
     <ClInclude Include="map.h" />
     <ClInclude Include="renderbatch.h" />

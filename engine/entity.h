@@ -11,7 +11,9 @@
 //Flags for entities
 #define ENTFLAG_HARMFUL		0x1 /**< Touching the entity is harmful to the hero */
 #define ENTFLAG_BLOCKING	0x2 /**< The entity cannot be passed through by the player */
-#define ENTFLAG_PUSHABLE	0x3 /**< The entity can be pushed */
+#define ENTFLAG_PUSHABLE	0x4 /**< The entity can be pushed */
+#define ENTFLAG_BOSS		0x8 /**< The entity is bigger and has more health than normal version*/
+#define ENTFLAG_LIGHT		0x10
 /******************************************************************************/
 //Directions entities may face
 #define ENTDIR_DOWN		0
@@ -29,9 +31,6 @@ typedef struct Entity_T{
 	short type; /**< The type of entity */
 	Vec2f size; /**< The size of the entity when drawn on the screen */
 	Vec3f pos; /**< The current position of the entity within the map */
-	Vec3f velocity; /**< The velocity for the entity */
-	Vec3f acceleration; /**< The acceleration for the entity */
-	Tile_T *onTile; /**< The tile the entity is on */
 	Map_T *onMap; /**< The map the entity is on */
 	union{
 		Sprite_T *sprite; /**< The sprite which represents this entity */
@@ -47,7 +46,11 @@ typedef struct Entity_T{
 	void (*Think)(struct Entity_T *e, GLuint delta); /**< A pointer for the entity's think function */
 	bool (*Pushed)(struct Entity_T *e, struct Entity_T *pusher, GLuint dir); /**< Pointer for the entity's callback for when pushed */ 
 	GLuint nextThink; /**< Timer for next think to be carried out */
+	struct Light_T *light; /**< Data used if the entity is a lightbearing one */
 	struct Entity_T *next; /**< The next entity in the linked list */
+	struct Entity_T *nextLight; /**< The next entity in the lights linked list */
+	struct cpShape *shape; /**< The collision shape of the entity */
+	struct cpBody *body; /**< The collision body of the entity */
 	//Effect data here?
 }Entity_T;
 /******************************************************************************/
@@ -62,7 +65,7 @@ Entity_T *SetupHero();
 Entity_T *SetupMonster(int monster);
 void MonsterHunt(Entity_T *e, GLuint delta);
 void StartAnimation(Entity_T *e, GLuint anim);
-
+void DefaultState(Entity_T *e);
 /******************************************************************************/
 #endif //__ENTITY_H
 /******************************************************************************/

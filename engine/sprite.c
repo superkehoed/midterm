@@ -7,13 +7,10 @@
  * @author Ulysee Thompson
  */
 /******************************************************************************/
-#include <GL/glew.h>
-#include <SDL.h>
-#include <SDL_opengl.h>
-#include <SDL_image.h>
-#include <GL/GLU.h>
-#include <stdio.h>
 #include "include.h"
+#include <SDL_image.h>
+#include <stdio.h>
+
 
 /******************************************************************************/
 /** Linked list storing any unused Sprite_T objects */
@@ -102,5 +99,7 @@ void GetSpriteUVs(Sprite_T *s, GLuint frame, Vec2f *ll, Vec2f *ur)
 	ur->x = s->frames[frame].x + s->frames[frame].w;
 	ur->y = s->frames[frame].y + s->frames[frame].h;
 }
+/******************************************************************************/
+/******************************************************************************/
 /******************************************************************************/
 /******************************************************************************/

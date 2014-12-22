@@ -2,12 +2,13 @@
 
 /** Render flags */
 #define BATCHFLAG_UNIFORM_TEXTURE		0x1
+#define BATCHFLAG_LIGHTING				0x2
 
 /** Used for storing data for batch renders */
 typedef struct RenderBatch_T
 {
 	struct RenderBatch_T *next;		/**< Pointer to the next renderbatch */
-	Vec2f vertices[MAX_VERTICES];   /**< List of vertices that may be repeated */
+	Vec3f vertices[MAX_VERTICES];   /**< List of vertices that may be repeated */
 	Vec2f UVs[MAX_VERTICES];	    /**< List of UVs that may not be repeated */
 	GLuint indices[MAX_INDICES];	/**< List of indices that will not be repeated */
 	GLfloat alpha_mod[MAX_INDICES];	/**< Alpha mods for each index */

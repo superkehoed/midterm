@@ -12,7 +12,7 @@
 #define RESET_INDEX				0xFFFFFFFF
 #define STARTING_NUM_SPRITES	100
 #define STARTING_NUM_ENTITIES	20
-#define TOTAL_DARKNESS			0.9f
+#define TOTAL_DARKNESS			0.99f
 /******************************************************************************/
 #define MAX_PARTICLES			10
 /******************************************************************************/
@@ -22,18 +22,20 @@
 #define SCREEN_HEIGHT 1024
 #define MILLISECONDS_PER_FRAME	30
 /******************************************************************************/
-#define SCREEN_TILE_WIDTH		20
-#define SCREEN_TILE_HEIGHT		16
+#define SCREEN_TILE_WIDTH		40
+#define SCREEN_TILE_HEIGHT		32
 #define SCREEN_MAX_SPRITES		200
 /******************************************************************************/
 #define TILE_WIDTH (2.0F / SCREEN_TILE_WIDTH )
 #define TILE_HEIGHT (2.0F / SCREEN_TILE_HEIGHT)
 
 /** The typedefined enumeration bringing booleans to C */
+/*
 typedef enum bool{
 	false,
 	true
 }bool;
+*/
 /******************************************************************************/
 #define MAX_ANIMATIONS				16
 #define MAX_FRAMES_PER_ANIMATION	12

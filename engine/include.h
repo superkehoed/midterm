@@ -1,6 +1,10 @@
 #ifndef __INCLUDE_H
 #define __INCLUDE_H
-
+#include <chipmunk\chipmunk.h>
+#include <GL\glew.h>
+#include <SDL.h>
+#include <SDL_opengl.h>
+#include <GL\GLU.h>
 #include "globals.h"
 #include "light.h"
 #include "sprite.h"
@@ -10,6 +14,6 @@
 #include "entity.h"
 #include "shader.h"
 #include "renderbatch.h"
+#include "inputs.h"
 #include "engine.h"
-
 #endif //__INCLUDE_H

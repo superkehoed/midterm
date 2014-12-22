@@ -1,6 +1,6 @@
 /******************************************************************************/
 /**
-@file engine.h
+ * @file engine.h
  */
 /******************************************************************************/
 #ifndef __ENGINE_H
@@ -29,6 +29,7 @@ typedef struct Engine_T{
 	Entity_T *foreGraphicsTail; /**< The foreground graphics for the game */
 	Entity_T *backGraphicsHead; /**< The background graphics for the game */
 	Entity_T *backGraphicsTail; /**< The background graphics for the game */
+	Entity_T *heart; /**< The graphic for health hearts */
 	RenderBatch_T mapBatch; /**< The render batch for the tiles on screen */
 	RenderBatch_T entBatch; /**< The render batch for the entities on screen */ 
 	struct Map_T *map; /**< The current map the hero is on */
@@ -38,7 +39,8 @@ typedef struct Engine_T{
 	int entityCount; /**< The current global count for entities */
 	int spriteCount; /**< The current global count for sprites */
 	int fontCount; /**< The current global count for sprites */
-	float darkness;
+	float darkness; /**< Global darkness variable */
+	const Uint8 *inputs; /**< Inputs from keyboard */
 	GLuint lastUpdate; /**< The last time an update occurred */
 	GLuint currentTime;	/**< The current time for the game */
 	//SpriteData *mSpriteList; /**< Linked list for tracking sprite
@@ -57,6 +59,10 @@ void DequeueBackGraphics(bool free);
 GLuint LoadTex(const char *name);
 int SDL_InvertSurface(SDL_Surface* image);
 GLuint SurfaceToTexture(SDL_Surface *surface);
+void InterpretInput();
+int KeyLookup(Sint32 SDLKey);
+bool SetupState();
+void UpdatePhysics(GLuint delta);
 /******************************************************************************/
 //General Functions
 GLuint Random(GLuint num);

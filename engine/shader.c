@@ -1,4 +1,5 @@
 /******************************************************************************/
+/******************************************************************************/
 #include <GL/glew.h>
 #include <SDL.h>
 #include <SDL_opengl.h>
@@ -62,8 +63,7 @@ int LoadShaderSource(const char* filename, GLchar** source, unsigned long* len)
       
    return 0; // No Error
 }
-
-
+/******************************************************************************/
 int UnloadShaderSource(GLchar** source)
 {
    if (*source != 0)
