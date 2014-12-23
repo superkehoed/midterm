@@ -171,6 +171,20 @@ void Poll()
 			game->darkness+=.01f;
 		if(game->inputs[SDL_SCANCODE_W])
 			game->darkness-=.01f;
+		if(game->inputs[SDL_SCANCODE_V]){
+			game->hero->light->offset.x+=.001f;
+			printf("Adjusting light to: %f,%f\n",
+				game->hero->light->offset.x, 
+				game->hero->light->offset.y);
+		}
+		if(game->inputs[SDL_SCANCODE_C]){
+			game->hero->light->offset.x-=.001f;
+			printf("Adjusting light to: %f,%f\n",
+				game->hero->light->offset.x, 
+				game->hero->light->offset.y);
+		}
+
+
 		break;
 	case GAMESTATE_CREDITS:
 		while(SDL_PollEvent(&e)){
@@ -308,10 +322,10 @@ void Draw()
 			offset.x = game->hero->pos.x;
 			offset.y = game->hero->pos.y;
 			SET_FLAG(game->mapBatch.flags, BATCHFLAG_LIGHTING);
-			BatchScreenMap(&game->mapBatch, game->map, Vec3fToVec2f(game->hero->pos));
+			BatchScreenMap(&game->mapBatch, game->map, game->hero->pos);
 			DrawBatch(&game->mapBatch, game->shader);
 			ResetBatch(&game->entBatch);
-			BatchScreenEntities(&game->entBatch, game->map, Vec3fToVec2f(game->hero->pos));
+			BatchScreenEntities(&game->entBatch, game->map, game->hero->pos);
 			DrawBatch(&game->entBatch, game->shader);
 		}
 		glUseProgram(game->shader->id);
@@ -890,7 +904,6 @@ bool SetupState()
 			SetupGraphic(e, s, GRAPHICTYPE_ELEMENT, 0, GRAPHFLAG_FADE_IN);
 			e->pos.x = -.55f;
 			e->pos.y = -.30f;
-			e->pos.z = 0.0f;
 			e->size.x = .1f;
 			e->size.y = .1f;
 			game->foreGraphicsTail->next = e;

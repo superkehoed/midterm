@@ -148,6 +148,7 @@ void DrawBatch(RenderBatch_T *batch, Shader_T *s)
 	GLfloat light_strengths[20];
 	GLfloat light_spans[20];
 	GLfloat light_colors[20];
+	GLuint rnd;
 	GLuint lightcount = 0;
 	int i;
 	GLfloat UVs[] = {0.0, 0.0,
@@ -167,17 +168,18 @@ void DrawBatch(RenderBatch_T *batch, Shader_T *s)
 	lightcol = glGetUniformLocation(s->id, "lightcolors");
 	numlights = glGetUniformLocation(s->id, "numlights");
 	transp = glGetUniformLocation(s->id, "transparency");
+	rnd = glGetUniformLocation(s->id, "rnd");
 
 	//Count the lights that may affect this batch and set up their data
 	for(e = game->map->lights;e;e = e->nextLight)
 	{
-		light_positions[3*lightcount] = e->pos.x + e->light->offset.x - game->hero->pos.x;
-		light_positions[3*lightcount+1] = e->pos.y + e->light->offset.y - game->hero->pos.y;
-		light_positions[3*lightcount+2] = e->pos.z - game->hero->pos.z;
+		light_positions[3*lightcount] = ((e->pos.x + e->light->offset.x - game->hero->pos.x) * SCREEN_WIDTH + SCREEN_WIDTH) / 2;
+		light_positions[3*lightcount+1] = ((e->pos.y + e->light->offset.y - game->hero->pos.y) * SCREEN_HEIGHT + SCREEN_HEIGHT) / 2;
+		light_positions[3*lightcount+2] = 0.0f;
 		light_colors[3*lightcount] = e->light->color.x;
 		light_colors[3*lightcount+1] = e->light->color.y;
 		light_colors[3*lightcount+2] = e->light->color.z;
-		light_spans[lightcount] = e->light->span;
+		light_spans[lightcount] = e->light->span * SCREEN_WIDTH;
 		light_strengths[lightcount] = e->light->brightness;
 		lightcount++;
 	}
@@ -193,6 +195,7 @@ void DrawBatch(RenderBatch_T *batch, Shader_T *s)
 	glProgramUniform3fv(s->id,lightpos, 20, light_positions);
 	glProgramUniform3fv(s->id,lightcol, 20, light_colors);
 	glProgramUniform1f(s->id, transp, 0.0f);
+	glProgramUniform2f(s->id, rnd, (GLfloat)Random(10000) / 10000.0f, (GLfloat)Random(10000) / 10000.0f);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, batch->textures[0]);
 	glEnableVertexAttribArray( s->uv_attrib );

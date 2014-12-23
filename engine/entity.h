@@ -30,7 +30,7 @@
 typedef struct Entity_T{
 	short type; /**< The type of entity */
 	Vec2f size; /**< The size of the entity when drawn on the screen */
-	Vec3f pos; /**< The current position of the entity within the map */
+	Vec2f pos; /**< The current position of the entity within the map */
 	Map_T *onMap; /**< The map the entity is on */
 	union{
 		Sprite_T *sprite; /**< The sprite which represents this entity */
@@ -63,6 +63,7 @@ void WalkEntity(Entity_T *e, int direction);
 bool UpdateEntity(Entity_T *e, GLuint delta);
 Entity_T *SetupHero();
 Entity_T *SetupMonster(int monster);
+Entity_T *SetupObject(int object);
 void MonsterHunt(Entity_T *e, GLuint delta);
 void StartAnimation(Entity_T *e, GLuint anim);
 void DefaultState(Entity_T *e);

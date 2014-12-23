@@ -97,8 +97,8 @@ void MoveEntity(Entity_T *ent, Map_T *map, Vec2f pos)
 		//Error - Moving to nopass tile
 		return;
 	}
-	ent->body->p.x = pos.x;
-	ent->body->p.y = pos.y;
+	ent->body->p.x = pos.x + ent->size.x / 2;
+	ent->body->p.y = pos.y + ent->size.y / 2;
 	if(ent->onMap != map)
 		AddToMap(ent, map);
 }
@@ -118,10 +118,10 @@ Entity_T *SetupHero()
 	e->currentAnimation = 0;
 	e->currentFrame = 0;
 	e->sprite = NewSprite();
-	e->body = cpBodyNew(1.0f, 1.0f);
+	e->body = cpBodyNew(100.0f, 100.0f);
 	e->size.x = TILE_WIDTH;
 	e->size.y = 1.5f * TILE_HEIGHT;
-	e->shape = cpBoxShapeNew(e->body, e->size.x, e->size.y);
+	e->shape = cpBoxShapeNew(e->body, e->size.x/2, e->size.y/2);
 	
 
 	for(i = 0;i < 20;i++)
@@ -151,7 +151,7 @@ Entity_T *SetupHero()
 	SetupSprite(e->sprite, "hero.png", frames, 20, animations, 8);
 	//Set up the hero's inner light
 	e->light = NewLight();
-	e->light->brightness = 0.8f;
+	e->light->brightness = 0.75f;
 	e->light->color.x = 1.0f;
 	e->light->color.y = .95f;
 	e->light->color.z = 0.5f;
@@ -225,11 +225,20 @@ bool PushEntity(Entity_T *e, Entity_T *pusher, GLuint dir)
  */
 bool UpdateEntity(Entity_T *e, GLuint delta)
 {
-	Vec3f pos = e->pos;
+	Vec2f pos = e->pos;
+	Vec2f testpos;
 	if(e->Think != NULL && e->nextThink <= game->currentTime)
 		(e->Think)(e, delta);
-	e->pos.x = (GLfloat)e->body->p.x;
-	e->pos.y = (GLfloat)e->body->p.y;
+	e->pos.x = (GLfloat)e->body->p.x - e->size.x / 2;
+	e->pos.y = (GLfloat)e->body->p.y - e->size.y / 2;
+
+	testpos.x = e->pos.x - e->size.x / 2;
+	testpos.y = e->pos.y;
+	if(TileAtPos(e->onMap, testpos) == NULL){
+		e->pos = pos;
+		e->body->p.x = e->pos.x + e->size.x / 2;;
+		e->body->p.y = e->pos.y + e->size.y / 2;;
+	}
 
 	//Update their animation after
 	if(e->nextFrame <= game->currentTime)
@@ -271,7 +280,7 @@ void StartAnimation(Entity_T *e, GLuint anim)
 /******************************************************************************/
 void WalkEntity(Entity_T *e, int direction)
 {
-	const float WALK_SPEED = TILE_WIDTH;
+	const float WALK_SPEED = TILE_WIDTH / 1000;
 	switch(direction){
 	case ENTDIR_UP:
 		e->body->v.y = WALK_SPEED;
@@ -381,7 +390,7 @@ Entity_T *SetupMonster(int monster)
 	e->body = cpBodyNew(1.0f, 1.0f);
 	e->size.x = 3* TILE_WIDTH;
 	e->size.y = 3 * 1.5f * TILE_HEIGHT;
-	e->shape = cpBoxShapeNew(e->body, e->size.x, e->size.y);
+	e->shape = cpBoxShapeNew(e->body, e->size.x/2, e->size.y/2);
 	
 	for(i = 0;i < 20;i++)
 	{
@@ -418,6 +427,54 @@ Entity_T *SetupMonster(int monster)
 	}
 	return e;
 }
+/******************************************************************************/
+Entity_T *SetupObject(int object)
+{
+	int i, x;
+	const GLfloat SPRITE_WIDTH = 32.0f / 128;
+	const GLfloat SPRITE_HEIGHT = 48.0f / 192;
+	Rect frames[20];
+	Animation_T animations[MAX_ANIMATIONS];
+	Entity_T *e = NewEntity();
+	e->currentAnimation = 0;
+	e->currentFrame = 0;
+	e->sprite = NewSprite();
+	e->body = cpBodyNew(1.0f, 1.0f);
+	e->size.x = TILE_WIDTH;
+	e->size.y = 1.5f * TILE_HEIGHT;
+	e->shape = cpBoxShapeNew(e->body, e->size.x/2, e->size.y/2);
+	
+	frames[0].x = 0;
+	frames[0].y = 0;
+	frames[0].w = 1;
+	frames[0].h = 1;
+	
+	animations[0].numFrames = 1;
+	animations[0].frames[0] = 0;
+	animations[0].frameLengths[0] = 100;
+	animations[0].flags = ANIMFLAG_NONE;
+
+	//TODO: Kludgy as heck, redo later.
+	switch(object){
+	case 0:
+		SetupSprite(e->sprite, "torch.png", frames, 1, animations, 1);
+		e->light = NewLight();
+		e->light->color.x = 1.0f;
+		e->light->color.y = 0.0f;
+		e->light->color.z = 1.0f;
+		e->light->brightness = 0.75f;
+		e->light->span = TILE_WIDTH * .75f;
+		e->light->offset.x = TILE_WIDTH / 2;
+		e->light->offset.y = 0;
+		SET_FLAG(e->flags, ENTFLAG_LIGHT);
+		e->currentAnimation = 0;
+		e->currentFrame = 0;
+		e->dir = ENTDIR_DOWN;
+		break;
+	}
+	return e;
+}
+
 /******************************************************************************/
 /******************************************************************************/
 /******************************************************************************/

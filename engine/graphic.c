@@ -352,7 +352,7 @@ void DrawHeart(Vec2f pos, int piece)
 void DrawHUD()
 {
 	int i;
-	int health = 23;
+	int health = 7;
 	Vec2f pos = {/*Heart Start position*/-1, 1-TILE_HEIGHT};
 	//Draw the hearts in the corner
 	for(i = 0;i < health;i+=4){

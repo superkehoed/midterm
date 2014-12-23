@@ -16,12 +16,12 @@ out float lightamts[20];
 void main(){
 	//Go through each light and calculate its impact on this vertex
 	//Go through each light and figure out how much of the intensity it contributes
-	for(int i = 0;i < numlights;i++){
+	/*for(int i = 0;i < numlights;i++){
 			lightamts[i]=max(0, lightstrengths[i] * exp(-distance(vec3(vertexPosition.xy, 0), lightpositions[i])/lightspans[i]));
 			//Give a solid bar of light at the center
 			//if(lightamts[i] >= lightstrengths[i] * .75)
 				//lightamts[i] = lightstrengths[i];
-	}
+	}*/
     // Output position of the vertex, in clip space : MVP * position
     gl_Position =  vec4(vertexPosition,1);
     // UV of the vertex. No special space for this one.

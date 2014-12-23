@@ -55,6 +55,7 @@ void RemoveFromMap(Entity_T *ent)
 		}
 	}
 	cpSpaceRemoveShape(ent->onMap->space, ent->shape);
+	cpSpaceRemoveBody(ent->onMap->space, ent->body);
 	ent->next = NULL;
 	ent->nextLight = NULL;
 	ent->onMap = NULL;
@@ -73,6 +74,7 @@ void AddToMap(Entity_T *ent, Map_T *map)
 	}
 	ent->onMap = map;
 	cpSpaceAddShape(ent->onMap->space, ent->shape);
+	cpSpaceAddBody(ent->onMap->space, ent->body);
 }
 
 void GetTileUVs(Map_T *map, short tnum, Vec2f *ll, Vec2f *ur)

@@ -55,7 +55,8 @@ Map_T *BlankMap()
 	map->start.x = 0;
 	map->start.y = 0;
 	map->space = cpSpaceNew();
-	map->space->gravity = cpv(0, -100);
+	map->space->gravity = cpv(0, 0);
+	map->space->damping = 0.9f;
 
 	return map;
 }
@@ -94,6 +95,10 @@ Map_T *StartMap()
 	MoveEntity(e, map, PosAtTile(p));
 	e->Think = &(MonsterHunt);
 	e->nextThink = game->currentTime + 1000;
+	e = SetupObject(0);
+	p.x = 3;
+	p.y = 1;
+	MoveEntity(e, map, PosAtTile(p));
 	return map;
 }
 /******************************************************************************/
